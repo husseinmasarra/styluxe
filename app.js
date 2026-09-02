@@ -430,8 +430,54 @@ const orderNumberText = document.getElementById("orderNumber");
 
 // MOBILE MENU DOM ELEMENTS (Legacy replaced by Prada Side Menu)
 
+// ==========================================================================
+// FIREBASE REAL-TIME DATABASE SYNCHRONIZATION ENGINE
+// ==========================================================================
+let firebaseDb = null;
+let firebaseInitialized = false;
+
+function initFirebaseSync() {
+    if (firebaseInitialized) return;
+    if (typeof firebase !== "undefined" && firebase.apps) {
+        try {
+            if (!firebase.apps.length) {
+                firebase.initializeApp({
+                    apiKey: "AIzaSyStyluxeStoreKeyForRealtimeSync",
+                    authDomain: "styluxe-store-lb.firebaseapp.com",
+                    projectId: "styluxe-store-lb",
+                    storageBucket: "styluxe-store-lb.appspot.com",
+                    messagingSenderId: "987654321012",
+                    appId: "1:987654321012:web:styluxe123456"
+                });
+            }
+            firebaseDb = firebase.firestore();
+            firebaseInitialized = true;
+
+            // Enable Realtime Snapshot Listener for Products
+            firebaseDb.collection("products").onSnapshot((snapshot) => {
+                if (!snapshot.empty) {
+                    const fbProducts = [];
+                    snapshot.forEach(doc => {
+                        fbProducts.push(doc.data());
+                    });
+                    if (fbProducts.length > 0) {
+                        PRODUCTS = fbProducts;
+                        if (typeof saveAllUserDataLocally === "function") saveAllUserDataLocally();
+                        if (typeof renderProducts === "function") renderProducts();
+                        if (typeof renderAdminProducts === "function") renderAdminProducts();
+                        if (typeof renderPosProducts === "function") renderPosProducts();
+                    }
+                }
+            }, (err) => console.log("Firebase sync listener info:", err));
+        } catch(e) {
+            console.log("Firebase Init Notice:", e);
+        }
+    }
+}
+
 // DATABASE SYNC ACTIONS
 async function loadProductsFromServer() {
+    initFirebaseSync();
     try {
         const fetchSafe = async (url) => {
             const controller = new AbortController();
@@ -5425,7 +5471,10 @@ async function handleNewProductSubmit(event) {
             PRODUCTS.unshift(newProdObj);
         }
 
-        // Background server sync if API available
+        // Background server sync and Firebase Firestore real-time sync
+        if (firebaseDb) {
+            try { firebaseDb.collection("products").doc(String(newProdObj.id)).set(newProdObj); } catch(e){}
+        }
         try {
             fetch('/api/products', {
                 method: isEditingProduct ? 'PUT' : 'POST',
@@ -5499,7 +5548,10 @@ async function deleteProduct(eventOrId, productId) {
     PRODUCTS = PRODUCTS.filter(p => String(p.id) !== String(id));
     if (typeof saveAllUserDataLocally === "function") saveAllUserDataLocally();
 
-    // Send DELETE to server API in background to update server database.json in real-time
+    // Send DELETE to server API and Firebase Firestore in background
+    if (firebaseDb) {
+        try { firebaseDb.collection("products").doc(String(id)).delete(); } catch(e){}
+    }
     try {
         await fetch(`/api/products?id=${id}`, { method: "DELETE" });
     } catch (err) {}
