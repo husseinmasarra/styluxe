@@ -462,9 +462,10 @@ async function loadProductsFromServer() {
             fetchSafe('/api/homepage-cards')
         ]);
 
-        // Fallback for static hosting (GitHub Pages, Netlify, Vercel Static) where /api/* endpoints are static files
+        // Fallback for static hosting (GitHub Pages, Netlify, Vercel Static, Cloudflare Pages) where /api/* endpoints are static files
         if (!prods || !cats) {
-            const dbData = await fetchSafe('/database.json') || await fetchSafe('database.json');
+            const cacheBuster = '?v=' + Date.now();
+            const dbData = await fetchSafe('/database.json' + cacheBuster) || await fetchSafe('database.json' + cacheBuster);
             if (dbData && typeof dbData === 'object') {
                 if (!prods && Array.isArray(dbData.products)) prods = dbData.products;
                 if (!cats && Array.isArray(dbData.categories)) cats = dbData.categories;
