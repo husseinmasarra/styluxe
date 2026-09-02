@@ -475,25 +475,37 @@ async function loadProductsFromServer() {
             }
         }
 
-        // 1. PRODUCTS: User Saved LocalStorage > Server API / database.json
+        // 1. PRODUCTS: Smart Local User Saved vs Server API / database.json fallback
         const userSavedProducts = localStorage.getItem("styluxe_products_user_saved");
+        let loadedLocalProds = null;
         if (userSavedProducts !== null) {
             try {
-                const parsedProds = JSON.parse(userSavedProducts);
-                if (Array.isArray(parsedProds)) PRODUCTS = parsedProds;
+                const parsed = JSON.parse(userSavedProducts);
+                if (Array.isArray(parsed) && parsed.length > 0) loadedLocalProds = parsed;
             } catch(e){}
-        } else if (Array.isArray(prods)) {
-            PRODUCTS = prods;
         }
 
-        // 2. CATEGORIES: User Saved LocalStorage > Server API / database.json
+        if (loadedLocalProds) {
+            PRODUCTS = loadedLocalProds;
+        } else if (Array.isArray(prods) && prods.length > 0) {
+            PRODUCTS = prods;
+        } else if (!Array.isArray(PRODUCTS) || PRODUCTS.length === 0) {
+            if (Array.isArray(prods)) PRODUCTS = prods;
+        }
+
+        // 2. CATEGORIES: Smart Local User Saved vs Server API / database.json fallback
         const userSavedCategories = localStorage.getItem("styluxe_categories_user_saved");
+        let loadedLocalCats = null;
         if (userSavedCategories !== null) {
             try {
-                const parsedCats = JSON.parse(userSavedCategories);
-                if (Array.isArray(parsedCats)) CATEGORIES = parsedCats;
+                const parsed = JSON.parse(userSavedCategories);
+                if (Array.isArray(parsed) && parsed.length > 0) loadedLocalCats = parsed;
             } catch(e){}
-        } else if (Array.isArray(cats)) {
+        }
+
+        if (loadedLocalCats) {
+            CATEGORIES = loadedLocalCats;
+        } else if (Array.isArray(cats) && cats.length > 0) {
             CATEGORIES = cats;
         }
 
@@ -12275,17 +12287,15 @@ function restoreSampleCategories() {
 }
 window.restoreSampleCategories = restoreSampleCategories;
 
-// Real-time Mobile Mirror Auto-Sync: Refetches live server data on tab focus or visibility change
+// Real-time Mobile Sync: Safely syncs live server data only if products array is empty
 window.addEventListener("focus", function() {
-    if (typeof loadProductsFromServer === "function") {
+    if ((!Array.isArray(PRODUCTS) || PRODUCTS.length === 0) && typeof loadProductsFromServer === "function") {
         loadProductsFromServer();
     }
 });
 document.addEventListener("visibilitychange", function() {
-    if (document.visibilityState === "visible") {
-        if (typeof loadProductsFromServer === "function") {
-            loadProductsFromServer();
-        }
+    if (document.visibilityState === "visible" && (!Array.isArray(PRODUCTS) || PRODUCTS.length === 0) && typeof loadProductsFromServer === "function") {
+        loadProductsFromServer();
     }
 });
 
