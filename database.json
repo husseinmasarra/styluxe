@@ -1,6 +1,30 @@
 {
   "products": [
     {
+      "id": 106,
+      "name": "GUCCI JEANS",
+      "price": 90,
+      "category": "Ready to Wear",
+      "department": "Men",
+      "brand": "GUCCI",
+      "image": "assets/user_prod_1.jpg",
+      "img": "assets/user_prod_1.jpg",
+      "description": "Gucci Denim Black Straight Fit Jeans with Horsebit Details",
+      "sizes": [
+        "30",
+        "32",
+        "34",
+        "36"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "inventory": {
+        "32-Black": 10,
+        "34-Black": 10
+      }
+    },
+    {
       "id": 101,
       "name": "LUXURY BLACK HOODIE",
       "price": 150,
