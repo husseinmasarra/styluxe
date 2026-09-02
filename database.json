@@ -1,14 +1,15 @@
 {
   "products": [
     {
-      "id": 1,
-      "name": "LUXURY BLACK HOODIE",
+      "id": 101,
+      "name": "BLACK HOODIE",
       "price": 150,
       "category": "Ready to Wear",
       "department": "Men",
       "brand": "Styluxe",
       "image": "assets/hoodie_black.png",
-      "description": "Heavyweight Luxury Cotton Hoodie",
+      "img": "assets/hoodie_black.png",
+      "description": "Heavyweight Luxury Black Zip Hoodie",
       "sizes": [
         "S",
         "M",
@@ -17,7 +18,193 @@
       ],
       "colors": [
         "Black"
-      ]
+      ],
+      "inventory": {
+        "M-Black": 20,
+        "L-Black": 20
+      }
+    },
+    {
+      "id": 102,
+      "name": "BLUE ZIP SWEATER",
+      "price": 130,
+      "category": "Ready to Wear",
+      "department": "Men",
+      "brand": "Styluxe",
+      "image": "assets/user_prod_2.jpg",
+      "img": "assets/user_prod_2.jpg",
+      "description": "Ribbed Knit High-Neck Blue Zip Sweater",
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "colors": [
+        "Navy Blue"
+      ],
+      "inventory": {
+        "M-Navy Blue": 15,
+        "L-Navy Blue": 15
+      }
+    },
+    {
+      "id": 103,
+      "name": "WHITE POLO SHIRT",
+      "price": 95,
+      "category": "Ready to Wear",
+      "department": "Men",
+      "brand": "Styluxe",
+      "image": "assets/user_prod_3.jpg",
+      "img": "assets/user_prod_3.jpg",
+      "description": "Textured Cotton Off-White Polo Shirt",
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "colors": [
+        "White"
+      ],
+      "inventory": {
+        "M-White": 25,
+        "L-White": 25
+      }
+    },
+    {
+      "id": 104,
+      "name": "BLACK LEATHER JACKET",
+      "price": 280,
+      "category": "Ready to Wear",
+      "department": "Men",
+      "brand": "Styluxe",
+      "image": "assets/jacket_leather.png",
+      "img": "assets/jacket_leather.png",
+      "description": "Premium Genuine Leather Biker Jacket",
+      "sizes": [
+        "M",
+        "L",
+        "XL"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "inventory": {
+        "M-Black": 10,
+        "L-Black": 10
+      }
+    },
+    {
+      "id": 105,
+      "name": "CARGO DENIM JEANS",
+      "price": 110,
+      "category": "Ready to Wear",
+      "department": "Men",
+      "brand": "Styluxe",
+      "image": "assets/user_prod_1.jpg",
+      "img": "assets/user_prod_1.jpg",
+      "description": "Relaxed Fit Black Cargo Jeans",
+      "sizes": [
+        "30",
+        "32",
+        "34",
+        "36"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "inventory": {
+        "32-Black": 15,
+        "34-Black": 15
+      }
+    },
+    {
+      "id": 201,
+      "name": "LUXURY LEATHER HANDBAG",
+      "price": 320,
+      "category": "Bags",
+      "department": "Women",
+      "brand": "Styluxe",
+      "image": "assets/category_bags.png",
+      "img": "assets/category_bags.png",
+      "description": "Minimalist Italian Leather Shoulder Bag",
+      "sizes": [
+        "One Size"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "inventory": {
+        "One Size-Black": 15
+      }
+    },
+    {
+      "id": 202,
+      "name": "OVERSIZED KNIT SWEATER",
+      "price": 120,
+      "category": "Ready to Wear",
+      "department": "Women",
+      "brand": "Styluxe",
+      "image": "assets/user_prod_2.jpg",
+      "img": "assets/user_prod_2.jpg",
+      "description": "Cozy Oversized Mohair Knit Sweater",
+      "sizes": [
+        "S",
+        "M",
+        "L"
+      ],
+      "colors": [
+        "Beige"
+      ],
+      "inventory": {
+        "M-Beige": 15
+      }
+    },
+    {
+      "id": 203,
+      "name": "TAILORED BLAZER",
+      "price": 240,
+      "category": "Ready to Wear",
+      "department": "Women",
+      "brand": "Styluxe",
+      "image": "assets/category_ready_to_wear.png",
+      "img": "assets/category_ready_to_wear.png",
+      "description": "Double-Breasted Wool Blend Blazer",
+      "sizes": [
+        "S",
+        "M",
+        "L"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "inventory": {
+        "M-Black": 10
+      }
+    },
+    {
+      "id": 301,
+      "name": "KIDS OVERSIZED HOODIE",
+      "price": 65,
+      "category": "Ready to Wear",
+      "department": "Kids",
+      "brand": "Styluxe",
+      "image": "assets/hoodie_black.png",
+      "img": "assets/hoodie_black.png",
+      "description": "Soft Fleece Kids Streetwear Hoodie",
+      "sizes": [
+        "6Y",
+        "8Y",
+        "10Y",
+        "12Y"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "inventory": {
+        "8Y-Black": 20
+      }
     }
   ],
   "categories": [
@@ -25,26 +212,78 @@
       "id": 1,
       "name": "Ready to Wear",
       "department": "Men",
-      "img": "assets/category_ready_to_wear.png"
+      "img": "assets/category_ready_to_wear.png",
+      "image": "assets/category_ready_to_wear.png"
     },
     {
       "id": 2,
       "name": "Bags",
+      "department": "Men",
+      "img": "assets/category_bags.png",
+      "image": "assets/category_bags.png"
+    },
+    {
+      "id": 3,
+      "name": "Shoes",
+      "department": "Men",
+      "img": "assets/category_shoes.png",
+      "image": "assets/category_shoes.png"
+    },
+    {
+      "id": 4,
+      "name": "Accessories",
+      "department": "Men",
+      "img": "assets/category_accessories.png",
+      "image": "assets/category_accessories.png"
+    },
+    {
+      "id": 5,
+      "name": "Ready to Wear",
       "department": "Women",
-      "img": "assets/category_bags.png"
+      "img": "assets/category_ready_to_wear.png",
+      "image": "assets/category_ready_to_wear.png"
+    },
+    {
+      "id": 6,
+      "name": "Bags",
+      "department": "Women",
+      "img": "assets/category_bags.png",
+      "image": "assets/category_bags.png"
+    },
+    {
+      "id": 7,
+      "name": "Shoes",
+      "department": "Women",
+      "img": "assets/category_shoes.png",
+      "image": "assets/category_shoes.png"
+    },
+    {
+      "id": 8,
+      "name": "Accessories",
+      "department": "Women",
+      "img": "assets/category_accessories.png",
+      "image": "assets/category_accessories.png"
+    },
+    {
+      "id": 9,
+      "name": "Ready to Wear",
+      "department": "Kids",
+      "img": "assets/category_ready_to_wear.png",
+      "image": "assets/category_ready_to_wear.png"
     }
   ],
   "brands": [
     {
+      "id": 1,
       "name": "Styluxe",
-      "img": "assets/favicon.jpg"
+      "img": "assets/category_accessories.png"
     }
   ],
-  "orders": [],
-  "users": [],
   "settings": {
-    "store_name": "STYLUXE",
-    "shipping_fee": "5",
-    "free_shipping_threshold": "150"
-  }
+    "shipping_fee": 5,
+    "free_shipping_threshold": 150,
+    "return_password": "admin123"
+  },
+  "coupons": [],
+  "orders": []
 }
