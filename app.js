@@ -475,13 +475,25 @@ async function loadProductsFromServer() {
             }
         }
 
-        // 1. PRODUCTS: Direct real-time canonical server database.json loading (No LocalStorage desync)
-        if (Array.isArray(prods)) {
+        // 1. PRODUCTS: User Saved LocalStorage > Server API / database.json
+        const userSavedProducts = localStorage.getItem("styluxe_products_user_saved");
+        if (userSavedProducts !== null) {
+            try {
+                const parsedProds = JSON.parse(userSavedProducts);
+                if (Array.isArray(parsedProds)) PRODUCTS = parsedProds;
+            } catch(e){}
+        } else if (Array.isArray(prods)) {
             PRODUCTS = prods;
         }
 
-        // 2. CATEGORIES: Direct real-time canonical server database.json loading
-        if (Array.isArray(cats)) {
+        // 2. CATEGORIES: User Saved LocalStorage > Server API / database.json
+        const userSavedCategories = localStorage.getItem("styluxe_categories_user_saved");
+        if (userSavedCategories !== null) {
+            try {
+                const parsedCats = JSON.parse(userSavedCategories);
+                if (Array.isArray(parsedCats)) CATEGORIES = parsedCats;
+            } catch(e){}
+        } else if (Array.isArray(cats)) {
             CATEGORIES = cats;
         }
 
@@ -5471,8 +5483,9 @@ async function deleteProduct(eventOrId, productId) {
     const tr = document.querySelector(`tr[data-id="${id}"]`);
     if (tr) tr.remove();
 
-    // Update local PRODUCTS array
+    // Update local PRODUCTS array and persist locally
     PRODUCTS = PRODUCTS.filter(p => String(p.id) !== String(id));
+    if (typeof saveAllUserDataLocally === "function") saveAllUserDataLocally();
 
     // Send DELETE to server API in background to update server database.json in real-time
     try {
