@@ -1,5 +1,125 @@
 {
-  "products": [],
+  "products": [
+    {
+      "id": 101,
+      "name": "LUXURY BLACK HOODIE",
+      "price": 150,
+      "category": "Ready to Wear",
+      "department": "Men",
+      "brand": "Styluxe",
+      "image": "assets/hoodie_black.png",
+      "img": "assets/hoodie_black.png",
+      "description": "Heavyweight Luxury Black Zip Hoodie",
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "inventory": {
+        "M-Black": 20,
+        "L-Black": 20
+      }
+    },
+    {
+      "id": 102,
+      "name": "BLUE ZIP SWEATER",
+      "price": 130,
+      "category": "Ready to Wear",
+      "department": "Men",
+      "brand": "Styluxe",
+      "image": "assets/user_prod_2.jpg",
+      "img": "assets/user_prod_2.jpg",
+      "description": "Ribbed Knit High-Neck Blue Zip Sweater",
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "colors": [
+        "Navy Blue"
+      ],
+      "inventory": {
+        "M-Navy Blue": 15,
+        "L-Navy Blue": 15
+      }
+    },
+    {
+      "id": 103,
+      "name": "WHITE POLO SHIRT",
+      "price": 95,
+      "category": "Ready to Wear",
+      "department": "Men",
+      "brand": "Styluxe",
+      "image": "assets/user_prod_3.jpg",
+      "img": "assets/user_prod_3.jpg",
+      "description": "Textured Cotton Knit White Polo Shirt",
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "colors": [
+        "White"
+      ],
+      "inventory": {
+        "M-White": 25,
+        "L-White": 25
+      }
+    },
+    {
+      "id": 104,
+      "name": "CARGO DENIM JEANS",
+      "price": 170,
+      "category": "Ready to Wear",
+      "department": "Men",
+      "brand": "Styluxe",
+      "image": "assets/jeans_cargo.png",
+      "img": "assets/jeans_cargo.png",
+      "description": "Relaxed Fit Cargo Denim Jeans",
+      "sizes": [
+        "30",
+        "32",
+        "34",
+        "36"
+      ],
+      "colors": [
+        "Rust / Orange"
+      ],
+      "inventory": {
+        "32-Rust / Orange": 10,
+        "34-Rust / Orange": 10
+      }
+    },
+    {
+      "id": 105,
+      "name": "BLACK LEATHER JACKET",
+      "price": 280,
+      "category": "Ready to Wear",
+      "department": "Men",
+      "brand": "Styluxe",
+      "image": "assets/jacket_leather.png",
+      "img": "assets/jacket_leather.png",
+      "description": "Premium Lambskin Leather Bomber Jacket",
+      "sizes": [
+        "M",
+        "L",
+        "XL"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "inventory": {
+        "M-Black": 8,
+        "L-Black": 8
+      }
+    }
+  ],
   "categories": [
     {
       "id": 1,
