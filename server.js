@@ -1,0 +1,2664 @@
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+const url = require('url');
+const nodemailer = require('nodemailer');
+const zlib = require('zlib');
+
+const PORT = parseInt(process.env.PORT || '8000', 10);
+const DB_FILE = path.join(__dirname, 'styluxe_db.json');
+
+const CONFIG_FILE = path.join(__dirname, 'config.json');
+let config = { GOOGLE_CLIENT_ID: "" };
+if (fs.existsSync(CONFIG_FILE)) {
+  try {
+    config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+  } catch (e) {
+    console.error("Failed to parse config.json:", e);
+  }
+}
+
+// Initial seed data
+const initialProducts = [
+  {
+    "id": 1,
+    "name": "T-SHIRT",
+    "price": 70,
+    "category": "T-SHIRT",
+    "department": "Men",
+    "image": "assets/user_prod_1.jpg",
+    "description": "t",
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "colors": [
+      "Brown",
+      "Blue",
+      "White",
+      "Navy Blue",
+      "Black"
+    ],
+    "inventory": {
+      "S-Brown": 10,
+      "S-Blue": 10,
+      "S-White": 10,
+      "S-Navy Blue": 10,
+      "S-Black": 10,
+      "M-Brown": 10,
+      "M-Blue": 10,
+      "M-White": 10,
+      "M-Navy Blue": 10,
+      "M-Black": 10,
+      "L-Brown": 10,
+      "L-Blue": 10,
+      "L-White": 10,
+      "L-Navy Blue": 10,
+      "L-Black": 10,
+      "XL-Brown": 10,
+      "XL-Blue": 10,
+      "XL-White": 10,
+      "XL-Navy Blue": 10,
+      "XL-Black": 10
+    },
+    "badge": "NEW",
+    "priority": 20,
+    "brand": "Zegna",
+    "costPrice": 35,
+    "preorder": false
+  },
+  {
+    "id": 2,
+    "name": "T-SHIRT",
+    "price": 70,
+    "category": "T-SHIRT",
+    "department": "Men",
+    "image": "assets/user_prod_2.jpg",
+    "description": "1",
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "colors": [
+      "whit",
+      "black",
+      "navy  blue",
+      "beige",
+      "brown"
+    ],
+    "inventory": {
+      "S-whit": 10,
+      "S-black": 10,
+      "S-navy  blue": 10,
+      "S-beige": 10,
+      "S-brown": 10,
+      "M-whit": 10,
+      "M-black": 10,
+      "M-navy  blue": 10,
+      "M-beige": 10,
+      "M-brown": 10,
+      "L-whit": 10,
+      "L-black": 10,
+      "L-navy  blue": 10,
+      "L-beige": 10,
+      "L-brown": 10,
+      "XL-whit": 10,
+      "XL-black": 10,
+      "XL-navy  blue": 10,
+      "XL-beige": 10,
+      "XL-brown": 10
+    },
+    "badge": "NEW",
+    "priority": 30,
+    "brand": "Berluti",
+    "costPrice": 35,
+    "preorder": false
+  },
+  {
+    "id": 3,
+    "name": "HALF-ZIP PULLOVERS ",
+    "price": 85,
+    "category": "Half-Zip Pullovers",
+    "department": "Men",
+    "image": "assets/user_prod_3.jpg",
+    "description": "Winter collection ",
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "xxl"
+    ],
+    "colors": [
+      "Black",
+      "blue",
+      "dark red"
+    ],
+    "inventory": {
+      "S-Black": 10,
+      "S-blue": 10,
+      "S-dark red": 10,
+      "M-Black": 10,
+      "M-blue": 10,
+      "M-dark red": 10,
+      "L-Black": 10,
+      "L-blue": 10,
+      "L-dark red": 10,
+      "XL-Black": 10,
+      "XL-blue": 10,
+      "XL-dark red": 10,
+      "xxl-Black": 10,
+      "xxl-blue": 10,
+      "xxl-dark red": 10
+    },
+    "badge": "NEW",
+    "priority": 1,
+    "brand": "Tom Ford",
+    "costPrice": 40,
+    "preorder": false
+  },
+  {
+    "id": 4,
+    "name": "PANTS",
+    "price": 80,
+    "category": "Pants",
+    "department": "Men",
+    "image": "assets/user_prod_4.jpg",
+    "description": "Pants Loro Piana",
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "colors": [
+      "Olive green",
+      "Brown",
+      "Hazel",
+      "navy",
+      "red dark",
+      "white",
+      "blue"
+    ],
+    "inventory": {
+      "S-Olive green": 10,
+      "S-Brown": 10,
+      "S-Hazel": 10,
+      "S-navy": 10,
+      "S-red dark": 10,
+      "S-white": 10,
+      "S-blue": 10,
+      "M-Olive green": 10,
+      "M-Brown": 10,
+      "M-Hazel": 10,
+      "M-navy": 10,
+      "M-red dark": 10,
+      "M-white": 10,
+      "M-blue": 10,
+      "L-Olive green": 10,
+      "L-Brown": 10,
+      "L-Hazel": 10,
+      "L-navy": 10,
+      "L-red dark": 10,
+      "L-white": 10,
+      "L-blue": 10,
+      "XL-Olive green": 10,
+      "XL-Brown": 10,
+      "XL-Hazel": 10,
+      "XL-navy": 10,
+      "XL-red dark": 10,
+      "XL-white": 10,
+      "XL-blue": 10,
+      "XXL-Olive green": 10,
+      "XXL-Brown": 10,
+      "XXL-Hazel": 10,
+      "XXL-navy": 10,
+      "XXL-red dark": 10,
+      "XXL-white": 10,
+      "XXL-blue": 10
+    },
+    "badge": "NEW",
+    "priority": 1,
+    "brand": "Loro Piana",
+    "costPrice": 40,
+    "preorder": false
+  },
+  {
+    "id": 5,
+    "name": "T-SHIRT",
+    "price": 60,
+    "category": "T-SHIRT",
+    "department": "Men",
+    "image": "assets/user_prod_5.jpg",
+    "description": "Amiri T-shirt",
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "colors": [
+      "Brown",
+      "White",
+      "bige",
+      "brown dark",
+      "olive green",
+      "red",
+      "blue"
+    ],
+    "inventory": {
+      "S-Brown": 10,
+      "S-White": 10,
+      "S-bige": 10,
+      "S-brown dark": 10,
+      "S-olive green": 10,
+      "S-red": 10,
+      "S-blue": 10,
+      "M-Brown": 10,
+      "M-White": 10,
+      "M-bige": 10,
+      "M-brown dark": 10,
+      "M-olive green": 10,
+      "M-red": 10,
+      "M-blue": 10,
+      "L-Brown": 10,
+      "L-White": 10,
+      "L-bige": 10,
+      "L-brown dark": 10,
+      "L-olive green": 10,
+      "L-red": 10,
+      "L-blue": 10,
+      "XL-Brown": 10,
+      "XL-White": 10,
+      "XL-bige": 10,
+      "XL-brown dark": 10,
+      "XL-olive green": 10,
+      "XL-red": 10,
+      "XL-blue": 10,
+      "XXL-Brown": 10,
+      "XXL-White": 10,
+      "XXL-bige": 10,
+      "XXL-brown dark": 10,
+      "XXL-olive green": 10,
+      "XXL-red": 10,
+      "XXL-blue": 10
+    },
+    "badge": "NEW",
+    "priority": 1,
+    "brand": "Zegna",
+    "costPrice": 30,
+    "preorder": false
+  },
+  {
+    "id": 6,
+    "name": "SHORT-SLEEVE SHIRT",
+    "price": 75,
+    "category": "Short-Sleeve Shirt",
+    "department": "Men",
+    "image": "assets/user_prod_6.jpg",
+    "description": "Prada Short-Sleeve Shirt",
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "colors": [
+      "Black"
+    ],
+    "inventory": {
+      "S-Black": 1,
+      "M-Black": 1,
+      "L-Black": 1,
+      "XL-Black": 1
+    },
+    "badge": "NEW",
+    "priority": 1,
+    "brand": "Prada",
+    "costPrice": 35,
+    "preorder": false
+  }
+];
+
+const initialUsers = [
+  {
+    id: 1,
+    name: "Lina Khoury",
+    email: "lina@example.com",
+    password: "user123",
+    phone: "+961 71 987 654",
+    address: "Achrafieh, Beirut",
+    dateJoined: "2026-06-12"
+  },
+  {
+    id: 2,
+    name: "Samir Ghanem",
+    email: "samir@example.com",
+    password: "user123",
+    phone: "+961 03 456 789",
+    address: "Hamra Street, Beirut",
+    dateJoined: "2026-06-10"
+  }
+];
+
+const initialOrders = [
+  {
+    id: "STX-84920",
+    date: "2026-06-13",
+    customerEmail: "samir@example.com",
+    customerName: "Samir Ghanem",
+    customerPhone: "+961 03 456 789",
+    customerAddress: "Hamra Street, Beirut",
+    items: [
+      {
+        id: 1,
+        name: "STYLUXE OVERSIZED COTTON HOODIE",
+        price: 85.00,
+        size: "L",
+        quantity: 1
+      }
+    ],
+    total: 95.00,
+    status: "DELIVERED",
+    department: "Men"
+  },
+  {
+    id: "STX-73910",
+    date: "2026-06-14",
+    customerEmail: "lina@example.com",
+    customerName: "Lina Khoury",
+    customerPhone: "+961 71 987 654",
+    customerAddress: "Achrafieh, Beirut",
+    items: [
+      {
+        id: 5,
+        name: "WOMEN'S GLOSSY DOWN PUFFER",
+        price: 160.00,
+        size: "M",
+        quantity: 1
+      }
+    ],
+    total: 160.00,
+    status: "PAID",
+    department: "Women"
+  }
+];
+
+const initialStaff = [
+  {
+    id: 1,
+    name: "Global Manager",
+    email: "manager@example.com",
+    password: "staff123",
+    role: "Manager",
+    permissions: ["manage_products", "manage_orders", "pos_access", "manage_staff"],
+    status: "Active"
+  }
+];
+
+function ensureProductInventory(product) {
+  if (!product.colors || !Array.isArray(product.colors) || product.colors.length === 0) {
+    product.colors = ["Black", "Brown", "Navy Blue", "White", "Blue"];
+  } else {
+    product.colors = product.colors.map(c => {
+      if (typeof c !== 'string') return "Black";
+      const clean = c.trim();
+      if (clean.toLowerCase() === "navy") return "Navy Blue";
+      if (clean.toLowerCase() === "gray") return "Grey";
+      return clean;
+    });
+  }
+  if (!product.inventory) {
+    product.inventory = {};
+    if (Array.isArray(product.sizes)) {
+      product.sizes.forEach(size => {
+        product.colors.forEach(color => {
+          const key = `${size}-${color}`;
+          product.inventory[key] = (typeof product.stock === 'number') ? product.stock : 1;
+        });
+      });
+    }
+  }
+  if (product.costPrice === undefined || product.costPrice === null) {
+    product.costPrice = parseFloat((product.price * 0.6).toFixed(2));
+  }
+  return product;
+}
+
+const initialCategories = [
+  // WOMEN
+  { id: 1, name: "Ready To Wear", img: "assets/category_ready_to_wear.png", department: "Women", priority: 1, parentId: null },
+  { id: 2, name: "Dresses", img: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=200", department: "Women", priority: 1, parentId: 1 },
+  { id: 3, name: "Tops", img: "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&q=80&w=200", department: "Women", priority: 2, parentId: 1 },
+  { id: 4, name: "Activewear", img: "https://images.unsplash.com/photo-1483721310020-03333e577078?auto=format&fit=crop&q=80&w=200", department: "Women", priority: 3, parentId: 1 },
+  { id: 5, name: "Jackets", img: "https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&q=80&w=200", department: "Women", priority: 4, parentId: 1 },
+  { id: 6, name: "Jeans", img: "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&q=80&w=200", department: "Women", priority: 5, parentId: 1 },
+  { id: 7, name: "Hoodies", img: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80&w=200", department: "Women", priority: 6, parentId: 1 },
+  { id: 8, name: "T-Shirts", img: "https://images.unsplash.com/photo-1503919545889-aef636e10ad4?auto=format&fit=crop&q=80&w=200", department: "Women", priority: 7, parentId: 1 },
+  { id: 9, name: "Bags", img: "assets/category_bags.png", department: "Women", priority: 8, parentId: null },
+  { id: 10, name: "Shoes", img: "assets/category_shoes.png", department: "Women", priority: 9, parentId: null },
+  { id: 11, name: "Accessories", img: "assets/category_accessories.png", department: "Women", priority: 10, parentId: null },
+
+  // MEN
+  { id: 20, name: "Ready To Wear", img: "assets/category_ready_to_wear.png", department: "Men", priority: 1, parentId: null },
+  { id: 21, name: "Hoodies", img: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80&w=200", department: "Men", priority: 1, parentId: 20 },
+  { id: 22, name: "Jackets", img: "https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&q=80&w=200", department: "Men", priority: 2, parentId: 20 },
+  { id: 23, name: "Jeans", img: "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&q=80&w=200", department: "Men", priority: 3, parentId: 20 },
+  { id: 24, name: "T-Shirts", img: "https://images.unsplash.com/photo-1503919545889-aef636e10ad4?auto=format&fit=crop&q=80&w=200", department: "Men", priority: 4, parentId: 20 },
+  { id: 25, name: "Pants", img: "https://images.unsplash.com/photo-1519457431-44ccd64a579b?auto=format&fit=crop&q=80&w=200", department: "Men", priority: 5, parentId: 20 },
+  { id: 26, name: "Footwear", img: "https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&q=80&w=200", department: "Men", priority: 6, parentId: null },
+  { id: 27, name: "Bags", img: "assets/category_bags.png", department: "Men", priority: 7, parentId: null },
+  { id: 28, name: "Accessories", img: "assets/category_accessories.png", department: "Men", priority: 8, parentId: null },
+
+  // KIDS
+  { id: 30, name: "Ready To Wear", img: "assets/category_ready_to_wear.png", department: "Kids", priority: 1, parentId: null },
+  { id: 31, name: "T-Shirts", img: "https://images.unsplash.com/photo-1503919545889-aef636e10ad4?auto=format&fit=crop&q=80&w=200", department: "Kids", priority: 1, parentId: 30 },
+  { id: 32, name: "Pants", img: "https://images.unsplash.com/photo-1519457431-44ccd64a579b?auto=format&fit=crop&q=80&w=200", department: "Kids", priority: 2, parentId: 30 },
+  { id: 33, name: "Hoodies", img: "assets/hoodie_black.png", department: "Kids", priority: 3, parentId: 30 },
+  { id: 34, name: "Jackets", img: "assets/jacket_leather.png", department: "Kids", priority: 4, parentId: 30 },
+  { id: 35, name: "Footwear", img: "assets/category_shoes.png", department: "Kids", priority: 5, parentId: null },
+  { id: 36, name: "Bags", img: "assets/category_bags.png", department: "Kids", priority: 6, parentId: null }
+];
+
+const initialBrands = [
+  { name: "Styluxe", img: "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&q=80&w=200" },
+  { name: "Essentials", img: "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&q=80&w=200" },
+  { name: "Supreme", img: "https://images.unsplash.com/photo-1531891437562-4301cf35b7e4?auto=format&fit=crop&q=80&w=200" },
+  { name: "Stussy", img: "https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&q=80&w=200" },
+  { name: "Balenciaga", img: "https://images.unsplash.com/photo-1582562124811-c09040d0a901?auto=format&fit=crop&q=80&w=200" },
+  { name: "Off-White", img: "https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&q=80&w=200" },
+  { name: "Nike", img: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=200" },
+  { name: "Adidas", img: "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?auto=format&fit=crop&q=80&w=200" },
+  { name: "Jordan", img: "https://images.unsplash.com/photo-1597045566677-8cf032ed6634?auto=format&fit=crop&q=80&w=200" },
+  { name: "Vans", img: "https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?auto=format&fit=crop&q=80&w=200" },
+  { name: "Champion", img: "https://images.unsplash.com/photo-1578587018452-892bacefd3f2?auto=format&fit=crop&q=80&w=200" },
+  { name: "Puma", img: "https://images.unsplash.com/photo-1608231387042-66d1773070a5?auto=format&fit=crop&q=80&w=200" }
+];
+
+// Global in-memory cache for ultra-fast, zero-latency synchronous reads
+let dbMemory = { products: [], users: [], orders: [], staff: [], categories: [], brands: [], coupons: [], settings: {}, subscribers: [] };
+let pool = null;
+
+// Initialize PostgreSQL connection pool if configured in config.json
+function initPgPool() {
+  if (pool) return; // Initialize only once to prevent connection leaks!
+
+  let dbUrl = process.env.DATABASE_URL;
+
+  if (!dbUrl) {
+    const CONFIG_FILE = path.join(__dirname, 'config.json');
+    if (fs.existsSync(CONFIG_FILE)) {
+      try {
+        const cfg = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+        dbUrl = cfg.DATABASE_URL;
+      } catch (e) {
+        console.error("Failed to read DATABASE_URL from config.json:", e);
+      }
+    }
+  }
+
+  if (dbUrl) {
+    try {
+      const { Pool } = require('pg');
+      pool = new Pool({
+        connectionString: dbUrl,
+        ssl: { rejectUnauthorized: false } // Required for cloud databases like Supabase/Neon/Render
+      });
+      console.log("Connected to PostgreSQL Database Pool successfully!");
+    } catch (e) {
+      console.error("Failed to initialize PostgreSQL pool:", e);
+    }
+  } else {
+    console.log("No PostgreSQL DATABASE_URL configured. Running with local JSON file database.");
+  }
+}
+
+// Create SQL Tables and populate seed data if empty
+async function initPgDatabase() {
+  if (!pool) return;
+  try {
+    // Create users table
+    await pool.query(`CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      email VARCHAR(255) UNIQUE NOT NULL,
+      password VARCHAR(255) NOT NULL,
+      phone VARCHAR(50),
+      address TEXT,
+      date_joined VARCHAR(50)
+    )`);
+
+    // Create products table
+    await pool.query(`CREATE TABLE IF NOT EXISTS products (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      price DOUBLE PRECISION NOT NULL,
+      category VARCHAR(100) NOT NULL,
+      department VARCHAR(50) NOT NULL,
+      image TEXT NOT NULL,
+      description TEXT,
+      sizes TEXT,
+      colors TEXT,
+      inventory TEXT,
+      badge VARCHAR(50),
+      priority INTEGER NOT NULL DEFAULT 1000
+    )`);
+     await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS priority INTEGER NOT NULL DEFAULT 1000`);
+     await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS brand VARCHAR(255) DEFAULT 'Styluxe'`);
+     await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS preorder BOOLEAN DEFAULT FALSE`);
+
+    // Create orders table
+    await pool.query(`CREATE TABLE IF NOT EXISTS orders (
+      id SERIAL PRIMARY KEY,
+      user_email VARCHAR(255) NOT NULL,
+      items TEXT NOT NULL,
+      total DOUBLE PRECISION NOT NULL,
+      payment_method VARCHAR(50) NOT NULL,
+      status VARCHAR(50) NOT NULL,
+      date VARCHAR(50)
+    )`);
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255)`);
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_phone VARCHAR(100)`);
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_address TEXT`);
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS department VARCHAR(50) DEFAULT 'Men'`);
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS cashier_name VARCHAR(255)`);
+
+    // Create staff table
+    await pool.query(`CREATE TABLE IF NOT EXISTS staff (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      email VARCHAR(255) UNIQUE NOT NULL,
+      password VARCHAR(255) NOT NULL,
+      role VARCHAR(100) NOT NULL,
+      permissions TEXT NOT NULL
+    )`);
+    await pool.query(`ALTER TABLE staff ADD COLUMN IF NOT EXISTS department VARCHAR(50) NOT NULL DEFAULT 'Global'`);
+
+    // Create categories table
+    await pool.query(`CREATE TABLE IF NOT EXISTS categories (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      img TEXT,
+      department VARCHAR(50) NOT NULL DEFAULT 'Men',
+      priority INTEGER NOT NULL DEFAULT 1000
+    )`);
+    await pool.query(`ALTER TABLE categories ADD COLUMN IF NOT EXISTS img TEXT`);
+    await pool.query(`ALTER TABLE categories ADD COLUMN IF NOT EXISTS department VARCHAR(50) NOT NULL DEFAULT 'Men'`);
+    await pool.query(`ALTER TABLE categories ADD COLUMN IF NOT EXISTS priority INTEGER NOT NULL DEFAULT 1000`);
+    try {
+      await pool.query(`ALTER TABLE categories DROP CONSTRAINT IF EXISTS categories_name_key`);
+    } catch (e) {}
+
+    // Create brands table
+    await pool.query(`CREATE TABLE IF NOT EXISTS brands (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) UNIQUE NOT NULL,
+      img TEXT NOT NULL
+    )`);
+
+    // Create suppliers table
+    await pool.query(`CREATE TABLE IF NOT EXISTS suppliers (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) UNIQUE NOT NULL,
+      company VARCHAR(255),
+      phone VARCHAR(100),
+      address TEXT
+    )`);
+
+    // Create invoices table
+    await pool.query(`CREATE TABLE IF NOT EXISTS invoices (
+      id SERIAL PRIMARY KEY,
+      invoice_number VARCHAR(100) UNIQUE NOT NULL,
+      supplier VARCHAR(255) NOT NULL,
+      date VARCHAR(100) NOT NULL,
+      total NUMERIC(10, 2) NOT NULL,
+      status VARCHAR(100) NOT NULL,
+      notes TEXT
+    )`);
+
+    // Migration: Add cost_price column to products table
+    await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS cost_price NUMERIC(10, 2) DEFAULT 0`);
+
+    // Create coupons table
+    await pool.query(`CREATE TABLE IF NOT EXISTS coupons (
+      id SERIAL PRIMARY KEY,
+      code VARCHAR(50) UNIQUE NOT NULL,
+      discount_type VARCHAR(20) NOT NULL,
+      discount_value DOUBLE PRECISION NOT NULL,
+      active BOOLEAN DEFAULT TRUE
+    )`);
+
+    // Create settings table
+    await pool.query(`CREATE TABLE IF NOT EXISTS settings (
+      key VARCHAR(100) PRIMARY KEY,
+      value TEXT NOT NULL
+    )`);
+
+    // Create subscribers table
+    await pool.query(`CREATE TABLE IF NOT EXISTS subscribers (
+      email VARCHAR(255) PRIMARY KEY,
+      subscribed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    // Seed default settings if empty
+    const settingsCount = await pool.query("SELECT COUNT(*) FROM settings");
+    if (parseInt(settingsCount.rows[0].count) === 0) {
+      console.log("Seeding default settings into PostgreSQL database...");
+      const defaultSettings = [
+        { key: "shipping_fee", value: "5" },
+        { key: "free_shipping_threshold", value: "150" },
+        { key: "whatsapp_men", value: "+961 70 123 456" },
+        { key: "whatsapp_women", value: "+961 70 123 456" },
+        { key: "whatsapp_kids", value: "+961 70 123 456" },
+        { key: "whatsapp_global", value: "+961 01 123 456" },
+        { key: "instagram_men", value: "https://instagram.com/styluxe.men" },
+        { key: "facebook_men", value: "https://facebook.com/styluxe.men" },
+        { key: "twitter_men", value: "https://twitter.com/styluxe.men" },
+        { key: "tiktok_men", value: "https://tiktok.com/@styluxe.men" },
+        { key: "instagram_women", value: "https://instagram.com/styluxe.women" },
+        { key: "facebook_women", value: "https://facebook.com/styluxe.women" },
+        { key: "twitter_women", value: "https://twitter.com/styluxe.women" },
+        { key: "tiktok_women", value: "https://tiktok.com/@styluxe.women" },
+        { key: "instagram_kids", value: "https://instagram.com/styluxe.kids" },
+        { key: "facebook_kids", value: "https://facebook.com/styluxe.kids" },
+        { key: "twitter_kids", value: "https://twitter.com/styluxe.kids" },
+        { key: "tiktok_kids", value: "https://tiktok.com/@styluxe.kids" },
+        { key: "instagram_global", value: "https://instagram.com/styluxe" },
+        { key: "facebook_global", value: "https://facebook.com/styluxe" },
+        { key: "twitter_global", value: "https://twitter.com/styluxe" },
+        { key: "tiktok_global", value: "https://tiktok.com/@styluxe" },
+        { key: "show_twitter", value: "false" },
+        { key: "show_tiktok", value: "false" },
+        { key: "return_password", value: "admin123" }
+      ];
+      for (const s of defaultSettings) {
+        await pool.query("INSERT INTO settings (key, value) VALUES ($1, $2)", [s.key, s.value]);
+      }
+    }
+
+    const userCount = await pool.query("SELECT COUNT(*) FROM users");
+    if (parseInt(userCount.rows[0].count) === 0) {
+      console.log("Seeding users into PostgreSQL database...");
+      for (const u of initialUsers) {
+        await pool.query(
+          `INSERT INTO users (name, email, password, phone, address, date_joined) VALUES ($1, $2, $3, $4, $5, $6)`,
+          [u.name, u.email, u.password, u.phone || "N/A", u.address || "N/A", u.dateJoined || new Date().toISOString().split('T')[0]]
+        );
+      }
+    }
+
+    const staffCount = await pool.query("SELECT COUNT(*) FROM staff");
+    if (parseInt(staffCount.rows[0].count) === 0) {
+      console.log("Seeding staff into PostgreSQL database...");
+      for (const s of initialStaff) {
+        await pool.query(
+          `INSERT INTO staff (name, email, password, role, permissions) VALUES ($1, $2, $3, $4, $5)`,
+          [s.name, s.email, s.password, s.role, JSON.stringify(s.permissions || [])]
+        );
+      }
+    }
+
+    const catCount = await pool.query("SELECT COUNT(*) FROM categories");
+    if (parseInt(catCount.rows[0].count) === 0) {
+      console.log("Seeding categories into PostgreSQL database...");
+      for (const c of initialCategories) {
+        await pool.query("INSERT INTO categories (id, name, img, department, priority, parent_id) VALUES ($1, $2, $3, $4, $5, $6)", [c.id, c.name, c.img, c.department, c.priority || 1000, c.parentId || null]);
+      }
+    }
+  } catch (err) {
+    console.error("Failed to initialize PostgreSQL database tables:", err);
+  }
+}
+
+// Load data from SQL or JSON into local memory cache
+async function loadDatabaseIntoMemory() {
+  initPgPool();
+  if (pool) {
+    await initPgDatabase();
+    try {
+      console.log("Loading database from PostgreSQL into RAM cache...");
+      const usersRes = await pool.query('SELECT * FROM users ORDER BY id ASC');
+      const productsRes = await pool.query('SELECT * FROM products ORDER BY priority ASC, id ASC');
+      const ordersRes = await pool.query('SELECT * FROM orders ORDER BY id ASC');
+      const staffRes = await pool.query('SELECT * FROM staff ORDER BY id ASC');
+      const categoriesRes = await pool.query('SELECT * FROM categories ORDER BY priority ASC, id ASC');
+      const brandsRes = await pool.query('SELECT * FROM brands ORDER BY id ASC');
+      const suppliersRes = await pool.query('SELECT * FROM suppliers ORDER BY id ASC');
+      const invoicesRes = await pool.query('SELECT * FROM invoices ORDER BY id ASC');
+      const couponsRes = await pool.query('SELECT * FROM coupons ORDER BY id ASC');
+      const settingsRes = await pool.query('SELECT * FROM settings');
+      const subscribersRes = await pool.query('SELECT * FROM subscribers');
+
+      dbMemory.users = usersRes.rows.map(u => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        password: u.password,
+        phone: u.phone,
+        address: u.address,
+        dateJoined: u.date_joined
+      }));
+
+      dbMemory.products = productsRes.rows.map(p => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        category: p.category,
+        department: p.department,
+        image: p.image,
+        description: p.description,
+        sizes: JSON.parse(p.sizes || '[]'),
+        colors: JSON.parse(p.colors || '[]'),
+        inventory: JSON.parse(p.inventory || '{}'),
+        badge: p.badge,
+        costPrice: p.cost_price ? parseFloat(p.cost_price) : 0,
+        priority: p.priority !== undefined ? p.priority : 1000,
+        brand: p.brand || 'Styluxe',
+        preorder: p.preorder === true || p.preorder === 'true'
+      }));
+
+      dbMemory.orders = ordersRes.rows.map(o => ({
+        id: o.id,
+        userEmail: o.user_email,
+        customerName: o.customer_name || 'N/A',
+        customerPhone: o.customer_phone || 'N/A',
+        customerAddress: o.customer_address || 'N/A',
+        customer: o.customer_name || 'N/A',
+        phone: o.customer_phone || 'N/A',
+        address: o.customer_address || 'N/A',
+        items: JSON.parse(o.items || '[]'),
+        total: o.total,
+        paymentMethod: o.payment_method,
+        status: o.status,
+        date: o.date,
+        department: o.department || 'Men',
+        cashierName: o.cashier_name || 'SYSTEM ADMIN'
+      }));
+
+      dbMemory.staff = staffRes.rows.map(s => ({
+        id: s.id,
+        name: s.name,
+        email: s.email,
+        password: s.password,
+        role: s.role,
+        permissions: JSON.parse(s.permissions || '[]')
+      }));
+
+      dbMemory.categories = categoriesRes.rows.map(c => ({ id: c.id, name: c.name, img: c.img || '', department: c.department || 'Men', priority: c.priority !== undefined ? c.priority : 1000, parentId: c.parent_id || null }));
+      dbMemory.brands = brandsRes.rows.map(b => ({ name: b.name, img: b.img }));
+      
+      dbMemory.suppliers = suppliersRes.rows.map(s => ({
+        id: s.id,
+        name: s.name,
+        company: s.company || '',
+        phone: s.phone || '',
+        address: s.address || ''
+      }));
+
+      dbMemory.invoices = invoicesRes.rows.map(inv => ({
+        id: inv.id,
+        invoiceNumber: inv.invoice_number,
+        supplier: inv.supplier,
+        date: inv.date,
+        total: parseFloat(inv.total),
+        status: inv.status,
+        notes: inv.notes || ''
+      }));
+
+      dbMemory.coupons = couponsRes.rows.map(c => ({
+        id: c.id,
+        code: c.code,
+        discountType: c.discount_type,
+        discountValue: c.discount_value,
+        active: c.active
+      }));
+
+      dbMemory.settings = {};
+      settingsRes.rows.forEach(row => {
+        dbMemory.settings[row.key] = row.value;
+      });
+
+      dbMemory.subscribers = subscribersRes.rows.map(row => row.email);
+
+      console.log(`RAM cache loaded successfully: ${dbMemory.products.length} products, ${dbMemory.categories.length} categories, ${dbMemory.brands.length} brands, ${dbMemory.suppliers.length} suppliers, ${dbMemory.invoices.length} invoices, ${dbMemory.coupons.length} coupons.`);
+      
+      // Sync local file copy with loaded postgres data
+      try {
+        fs.writeFileSync(DB_FILE, JSON.stringify(dbMemory, null, 2), 'utf-8');
+      } catch (e) {}
+      
+      return;
+    } catch (err) {
+      console.error("FATAL: Failed to load PostgreSQL data:", err);
+      throw new Error("PostgreSQL database is configured but failed to load. Aborting server startup to prevent data loss.");
+    }
+  }
+
+  // Local JSON file fallback
+  console.log("Loading database from local JSON file...");
+  if (!fs.existsSync(DB_FILE)) {
+    dbMemory = { products: initialProducts, users: initialUsers, orders: initialOrders, staff: initialStaff, categories: initialCategories, brands: initialBrands };
+    dbMemory.products = dbMemory.products.map(p => ensureProductInventory(p));
+    fs.writeFileSync(DB_FILE, JSON.stringify(dbMemory, null, 2), 'utf-8');
+    return;
+  }
+  try {
+    const data = fs.readFileSync(DB_FILE, 'utf-8');
+    dbMemory = JSON.parse(data);
+    
+    // Migrations
+    if (!dbMemory.categories || !Array.isArray(dbMemory.categories)) {
+        dbMemory.categories = [];
+    } else {
+        dbMemory.categories = dbMemory.categories.map((c, idx) => {
+            if (typeof c === 'string') return { id: idx + 1, name: c, department: "Men", priority: 1, img: "assets/category_ready_to_wear.png" };
+            if (!c.id) c.id = idx + 1;
+            if (!c.department) c.department = "Men";
+            return c;
+        });
+    }
+    if (!dbMemory.brands) dbMemory.brands = initialBrands;
+    if (!dbMemory.suppliers) dbMemory.suppliers = [];
+    if (!dbMemory.invoices) dbMemory.invoices = [];
+    if (!dbMemory.dailyRegisters) dbMemory.dailyRegisters = [];
+    if (!dbMemory.homepage_category_cards) dbMemory.homepage_category_cards = null;
+    dbMemory.products = dbMemory.products.map(p => ensureProductInventory(p));
+  } catch (err) {
+    console.error("Error reading JSON file database, using mock memory fallbacks:", err);
+    dbMemory = { products: initialProducts, users: initialUsers, orders: initialOrders, staff: initialStaff, categories: initialCategories, brands: initialBrands, suppliers: [], invoices: [], dailyRegisters: [] };
+  }
+}
+
+// Synchronous wrapper to read database from local RAM cache
+function readDb() {
+  return dbMemory;
+}
+
+// Synchronous update to RAM & local file, with background asynchronous Postgres sync task
+function writeDb(data) {
+  dbMemory = data;
+  try {
+    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    const backupPath = path.join(__dirname, 'database.json');
+    fs.writeFileSync(backupPath, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (err) {
+    console.error("Error writing JSON file database:", err);
+  }
+
+  // 2. Perform background asynchronous SQL sync if using PostgreSQL pool
+  if (pool) {
+    (async () => {
+      try {
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+
+          // Sync users
+          await client.query('DELETE FROM users');
+          const userStmt = 'INSERT INTO users (id, name, email, password, phone, address, date_joined) VALUES ($1, $2, $3, $4, $5, $6, $7)';
+          for (const u of data.users) {
+            await client.query(userStmt, [u.id, u.name, u.email, u.password, u.phone || 'N/A', u.address || 'N/A', u.dateJoined || '']);
+          }
+
+          // Sync products
+          await client.query('DELETE FROM products');
+          const prodStmt = 'INSERT INTO products (id, name, price, category, department, image, description, sizes, colors, inventory, badge, cost_price, priority, brand, preorder) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)';
+          for (const p of data.products) {
+            await client.query(prodStmt, [
+              p.id, p.name, p.price, p.category, p.department, p.image, p.description || '',
+              JSON.stringify(p.sizes || []), JSON.stringify(p.colors || []), JSON.stringify(p.inventory || {}), p.badge || '', p.costPrice || 0, p.priority !== undefined ? p.priority : 1000,
+              p.brand || 'Styluxe', p.preorder || false
+            ]);
+          }
+
+          // Sync orders
+          await client.query('DELETE FROM orders');
+          const orderStmt = 'INSERT INTO orders (id, user_email, customer_name, customer_phone, customer_address, items, total, payment_method, status, date, department, cashier_name) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)';
+          for (const o of data.orders) {
+            await client.query(orderStmt, [
+              o.id, o.userEmail, o.customerName || o.customer || 'N/A', o.customerPhone || o.phone || 'N/A', o.customerAddress || o.address || 'N/A',
+              JSON.stringify(o.items || []), o.total, o.paymentMethod || 'COD', o.status, o.date, o.department || 'Men', o.cashierName || 'SYSTEM ADMIN'
+            ]);
+          }
+
+          // Sync staff
+          await client.query('DELETE FROM staff');
+          const staffStmt = 'INSERT INTO staff (id, name, email, password, role, permissions, department) VALUES ($1, $2, $3, $4, $5, $6, $7)';
+          for (const s of data.staff) {
+            await client.query(staffStmt, [s.id, s.name, s.email, s.password, s.role, JSON.stringify(s.permissions || []), s.department || 'Global']);
+          }
+
+          // Sync categories
+          await client.query('DELETE FROM categories');
+          const catStmt = 'INSERT INTO categories (id, name, img, department, priority, parent_id) VALUES ($1, $2, $3, $4, $5, $6)';
+          for (const c of (data.categories || [])) {
+            await client.query(catStmt, [c.id, c.name, c.img || '', c.department || 'Men', c.priority !== undefined ? c.priority : 1000, c.parentId || null]);
+          }
+
+          // Sync brands
+          await client.query('DELETE FROM brands');
+          const brandStmt = 'INSERT INTO brands (name, img) VALUES ($1, $2)';
+          for (const b of (data.brands || [])) {
+            await client.query(brandStmt, [b.name, b.img]);
+          }
+
+          // Sync suppliers
+          await client.query('DELETE FROM suppliers');
+          const supplierStmt = 'INSERT INTO suppliers (name, company, phone, address) VALUES ($1, $2, $3, $4)';
+          for (const s of (data.suppliers || [])) {
+            await client.query(supplierStmt, [s.name, s.company, s.phone, s.address]);
+          }
+
+          // Sync invoices
+          await client.query('DELETE FROM invoices');
+          const invoiceStmt = 'INSERT INTO invoices (invoice_number, supplier, date, total, status, notes) VALUES ($1, $2, $3, $4, $5, $6)';
+          for (const inv of (data.invoices || [])) {
+            await client.query(invoiceStmt, [inv.invoiceNumber, inv.supplier, inv.date, inv.total, inv.status, inv.notes]);
+          }
+
+          // Sync coupons
+          await client.query('DELETE FROM coupons');
+          const couponStmt = 'INSERT INTO coupons (code, discount_type, discount_value, active) VALUES ($1, $2, $3, $4)';
+          for (const c of (data.coupons || [])) {
+            await client.query(couponStmt, [c.code, c.discountType, c.discountValue, c.active]);
+          }
+
+          // Sync settings
+          await client.query('DELETE FROM settings');
+          const settingsStmt = 'INSERT INTO settings (key, value) VALUES ($1, $2)';
+          if (data.settings) {
+            for (const [key, val] of Object.entries(data.settings)) {
+              await client.query(settingsStmt, [key, String(val)]);
+            }
+          }
+
+          // Sync subscribers
+          await client.query('DELETE FROM subscribers');
+          const subStmt = 'INSERT INTO subscribers (email) VALUES ($1)';
+          if (Array.isArray(data.subscribers)) {
+            for (const email of data.subscribers) {
+              await client.query(subStmt, [email]);
+            }
+          }
+
+          await client.query('COMMIT');
+        } catch (err) {
+          await client.query('ROLLBACK');
+          throw err;
+        } finally {
+          client.release();
+        }
+      } catch (err) {
+        console.error("Background PostgreSQL sync task failed:", err);
+      }
+    })();
+  }
+  return true;
+}
+
+// Serve JSON Response helper with Gzip/Deflate Compression for Ultra-Fast Transfers
+function sendJsonResponse(res, data, status = 200, req = null) {
+  const jsonString = JSON.stringify(data);
+  const acceptEncoding = (req && req.headers && req.headers['accept-encoding']) || '';
+  const headers = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type'
+  };
+
+  const buffer = Buffer.from(jsonString);
+
+  if (buffer.length > 512) {
+    if (/\bgzip\b/.test(acceptEncoding)) {
+      headers['Content-Encoding'] = 'gzip';
+      res.writeHead(status, headers);
+      res.end(zlib.gzipSync(buffer));
+      return;
+    } else if (/\bdeflate\b/.test(acceptEncoding)) {
+      headers['Content-Encoding'] = 'deflate';
+      res.writeHead(status, headers);
+      res.end(zlib.deflateSync(buffer));
+      return;
+    }
+  }
+
+  res.writeHead(status, headers);
+  res.end(buffer);
+}
+
+// Automatic Base64 Image Processing & Storage System
+const UPLOADS_DIR = path.join(__dirname, 'assets', 'uploads');
+if (!fs.existsSync(UPLOADS_DIR)) {
+  try { fs.mkdirSync(UPLOADS_DIR, { recursive: true }); } catch(e){}
+}
+
+function saveSingleBase64Image(str) {
+  if (typeof str !== 'string' || !str.trim().startsWith('data:image/')) {
+    return str;
+  }
+  try {
+    const trimmed = str.trim();
+    const matches = trimmed.match(/^data:image\/([a-zA-Z0-9+\-]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) return str;
+
+    let ext = matches[1].toLowerCase();
+    if (ext === 'jpeg') ext = 'jpg';
+    if (ext === 'svg+xml') ext = 'svg';
+
+    const buffer = Buffer.from(matches[2], 'base64');
+    const filename = `upload_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
+    const filePath = path.join(UPLOADS_DIR, filename);
+
+    fs.writeFileSync(filePath, buffer);
+    return `assets/uploads/${filename}`;
+  } catch (err) {
+    console.error("Failed to save base64 image:", err);
+    return str;
+  }
+}
+
+function processAndSaveImages(obj) {
+  if (obj === null || obj === undefined) return obj;
+
+  if (typeof obj === 'string') {
+    if (obj.includes('data:image/')) {
+      const parts = obj.split(',');
+      const processed = parts.map(part => saveSingleBase64Image(part));
+      return processed.join(',');
+    }
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(item => processAndSaveImages(item));
+  }
+
+  if (typeof obj === 'object') {
+    const result = {};
+    for (const key of Object.keys(obj)) {
+      result[key] = processAndSaveImages(obj[key]);
+    }
+    return result;
+  }
+
+  return obj;
+}
+
+// Read POST request body
+function readRequestBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
+    req.on('end', () => {
+      try {
+        const parsed = body ? JSON.parse(body) : {};
+        const processed = processAndSaveImages(parsed);
+        resolve(processed);
+      } catch (err) {
+        reject(err);
+      }
+    });
+  });
+}
+
+// MIME types lookup
+const MIME_TYPES = {
+  '.html': 'text/html',
+  '.css': 'text/css',
+  '.js': 'application/javascript',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon'
+};
+
+// Create server
+const requestListener = async (req, res) => {
+  // CORS Preflight
+  if (req.method === 'OPTIONS') {
+    res.writeHead(200, {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type'
+    });
+    res.end();
+    return;
+  }
+
+  const parsedUrl = url.parse(req.url, true);
+  const pathname = parsedUrl.pathname;
+
+  // --- API ROUTING ---
+  if (pathname.startsWith('/api/')) {
+    const db = readDb();
+
+    // 1. GET Requests
+    if (req.method === 'GET') {
+      if (pathname === '/api/health') {
+        sendJsonResponse(res, { status: "ok", uptime: process.uptime(), timestamp: new Date().toISOString() });
+        return;
+      }
+      if (pathname === '/api/config') {
+        let currentConfig = { GOOGLE_CLIENT_ID: "" };
+        if (fs.existsSync(CONFIG_FILE)) {
+          try {
+            currentConfig = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+          } catch (e) {
+            console.error("Failed to parse config.json dynamically:", e);
+          }
+        }
+        sendJsonResponse(res, {
+          GOOGLE_CLIENT_ID: currentConfig.GOOGLE_CLIENT_ID || ""
+        });
+        return;
+      }
+      if (pathname === '/api/settings') {
+        sendJsonResponse(res, db.settings || {}, 200, req);
+        return;
+      }
+      if (pathname === '/api/coupons') {
+        sendJsonResponse(res, db.coupons || [], 200, req);
+        return;
+      }
+      if (pathname === '/api/coupons/validate') {
+        const code = (parsedUrl.query.code || "").trim().toUpperCase();
+        if (!code) {
+          sendJsonResponse(res, { error: "Missing coupon code" }, 400, req);
+          return;
+        }
+        const coupon = (db.coupons || []).find(c => c.code.toUpperCase() === code && c.active);
+        if (coupon) {
+          sendJsonResponse(res, {
+            valid: true,
+            code: coupon.code,
+            discountType: coupon.discountType,
+            discountValue: coupon.discountValue
+          }, 200, req);
+        } else {
+          sendJsonResponse(res, { valid: false, error: "Invalid or inactive coupon code" }, 200, req);
+        }
+        return;
+      }
+      if (pathname === '/api/products') {
+        sendJsonResponse(res, db.products, 200, req);
+        return;
+      }
+      if (pathname === '/api/categories') {
+        if (!db.categories || !Array.isArray(db.categories)) {
+          db.categories = [];
+          writeDb(db);
+        }
+        sendJsonResponse(res, db.categories, 200, req);
+        return;
+      }
+      if (pathname === '/api/navigation-menu') {
+        sendJsonResponse(res, db.navigation_menu || null, 200, req);
+        return;
+      }
+      if (pathname === '/api/homepage-cards') {
+        sendJsonResponse(res, db.homepage_category_cards || null, 200, req);
+        return;
+      }
+      if (pathname === '/api/brands') {
+        sendJsonResponse(res, db.brands || [], 200, req);
+        return;
+      }
+      if (pathname === '/api/suppliers') {
+        sendJsonResponse(res, db.suppliers || []);
+        return;
+      }
+      if (pathname === '/api/invoices') {
+        sendJsonResponse(res, db.invoices || []);
+        return;
+      }
+      if (pathname === '/api/daily-registers') {
+        sendJsonResponse(res, db.dailyRegisters || []);
+        return;
+      }
+      if (pathname === '/api/users') {
+        // Exclude passwords
+        const safeUsers = db.users.map(u => {
+          const { password, ...rest } = u;
+          return rest;
+        });
+        sendJsonResponse(res, safeUsers);
+        return;
+      }
+      if (pathname === '/api/staff') {
+        // Exclude passwords
+        const safeStaff = db.staff.map(s => {
+          const { password, ...rest } = s;
+          return rest;
+        });
+        sendJsonResponse(res, safeStaff);
+        return;
+      }
+      if (pathname === '/api/orders') {
+        const email = parsedUrl.query.email;
+        if (email) {
+          const userOrders = db.orders.filter(o => o.customerEmail === email);
+          sendJsonResponse(res, userOrders);
+        } else {
+          sendJsonResponse(res, db.orders);
+        }
+        return;
+      }
+
+      if (pathname === '/api/orders/track') {
+        const query = parsedUrl.query.query;
+        if (!query) {
+          sendJsonResponse(res, { error: "Missing query parameter" }, 400);
+          return;
+        }
+        const queryClean = query.trim().toLowerCase();
+        const matched = (db.orders || []).filter(o => {
+          const idMatches = String(o.id) === queryClean;
+          const phoneMatches = o.customerPhone && o.customerPhone.replace(/[\s\-\+\(\)]/g, '').includes(queryClean.replace(/[\s\-\+\(\)]/g, ''));
+          return idMatches || phoneMatches;
+        });
+        sendJsonResponse(res, matched);
+        return;
+      }
+
+      if (pathname === '/api/analytics') {
+        const orders = db.orders || [];
+        const products = db.products || [];
+
+        const validOrders = orders.filter(o => o.status !== 'Cancelled');
+        
+        let totalSales = 0;
+        let totalCost = 0;
+        let totalOrders = validOrders.length;
+
+        const categoryMap = {};
+        const monthlyMap = {};
+
+        const months = [];
+        for (let i = 5; i >= 0; i--) {
+          const d = new Date();
+          d.setMonth(d.getMonth() - i);
+          const monthName = d.toLocaleString('default', { month: 'short' });
+          months.push(monthName);
+          monthlyMap[monthName] = 0;
+        }
+
+        validOrders.forEach(o => {
+          totalSales += parseFloat(o.total) || 0;
+
+          if (o.date) {
+            const orderDate = new Date(o.date);
+            const mName = orderDate.toLocaleString('default', { month: 'short' });
+            if (monthlyMap[mName] !== undefined) {
+              monthlyMap[mName] += parseFloat(o.total) || 0;
+            }
+          }
+
+          if (o.items && Array.isArray(o.items)) {
+            o.items.forEach(item => {
+              const qty = parseInt(item.quantity) || 1;
+              const itemPrice = parseFloat(item.price) || 0;
+              
+              const prod = products.find(p => p.id === parseInt(item.id));
+              const cost = prod && prod.costPrice ? parseFloat(prod.costPrice) : (itemPrice * 0.6);
+              totalCost += cost * qty;
+
+              const cat = item.category || (prod && prod.category) || 'Other';
+              categoryMap[cat] = (categoryMap[cat] || 0) + qty;
+            });
+          }
+        });
+
+        const totalProfit = totalSales - totalCost;
+        const aov = totalOrders > 0 ? (totalSales / totalOrders) : 0;
+
+        const categoryData = Object.keys(categoryMap).map(name => ({
+          name: name,
+          value: categoryMap[name]
+        }));
+
+        const monthlyData = months.map(m => monthlyMap[m] || 0);
+
+        sendJsonResponse(res, {
+          totalSales: Math.round(totalSales * 100) / 100,
+          totalProfit: Math.round(totalProfit * 100) / 100,
+          totalOrders,
+          aov: Math.round(aov * 100) / 100,
+          categoryShare: categoryData,
+          monthlySales: {
+            labels: months,
+            data: monthlyData
+          }
+        });
+        return;
+      }
+    }
+
+    // 2. POST Requests
+    if (req.method === 'POST') {
+      let body;
+      try {
+        body = await readRequestBody(req);
+      } catch (err) {
+        sendJsonResponse(res, { error: "Invalid JSON body" }, 400);
+        return;
+      }
+
+      if (pathname === '/api/users/register') {
+        const { name, email, password, phone, address, dateJoined } = body;
+        const normalizedEmail = (email || '').trim().toLowerCase();
+
+        if (!name || !normalizedEmail || !password || !phone || !address) {
+          sendJsonResponse(res, { error: "Missing required fields" }, 400);
+          return;
+        }
+
+        const exists = db.users.some(u => u.email.toLowerCase() === normalizedEmail);
+        if (exists) {
+          sendJsonResponse(res, { error: "An account with this email already exists" }, 409);
+          return;
+        }
+
+        const newUser = {
+          id: db.users.length > 0 ? Math.max(...db.users.map(u => u.id)) + 1 : 1,
+          name,
+          email: normalizedEmail,
+          password,
+          phone,
+          address,
+          dateJoined: dateJoined || new Date().toISOString().split('T')[0]
+        };
+
+        db.users.push(newUser);
+        writeDb(db);
+
+        const { password: _, ...safeUser } = newUser;
+        sendJsonResponse(res, safeUser);
+        return;
+      }
+
+      if (pathname === '/api/users/social-login') {
+        const { name, email } = body;
+        const normalizedEmail = (email || '').trim().toLowerCase();
+
+        if (!normalizedEmail) {
+          sendJsonResponse(res, { error: "Email is required" }, 400);
+          return;
+        }
+
+        // Check if user exists
+        let user = db.users.find(u => u.email.toLowerCase() === normalizedEmail);
+
+        if (!user) {
+          // Automatically create a new user profile
+          const id = db.users.length > 0 ? Math.max(...db.users.map(u => u.id)) + 1 : 1;
+          user = {
+            id,
+            name: name || 'Styluxe Customer',
+            email: normalizedEmail,
+            password: 'social-auth-disabled-password',
+            phone: 'N/A',
+            address: 'N/A',
+            dateJoined: new Date().toISOString().split('T')[0]
+          };
+          db.users.push(user);
+          writeDb(db);
+        }
+
+        const { password: _, ...safeUser } = user;
+        sendJsonResponse(res, safeUser);
+        return;
+      }
+
+      if (pathname === '/api/users/google-login') {
+        const { credential } = body;
+        if (!credential) {
+          sendJsonResponse(res, { error: "Missing credential token" }, 400);
+          return;
+        }
+
+        // Verify with configured Google Client ID if available
+        let currentConfig = { GOOGLE_CLIENT_ID: "" };
+        if (fs.existsSync(CONFIG_FILE)) {
+          try {
+            currentConfig = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+          } catch (e) {}
+        }
+        const profile = verifyGoogleToken(credential, currentConfig.GOOGLE_CLIENT_ID);
+        if (!profile) {
+          sendJsonResponse(res, { error: "Invalid Google credential token or expired session" }, 401);
+          return;
+        }
+
+        const normalizedEmail = (profile.email || '').trim().toLowerCase();
+        let user = db.users.find(u => u.email.toLowerCase() === normalizedEmail);
+
+        if (!user) {
+          const id = db.users.length > 0 ? Math.max(...db.users.map(u => u.id)) + 1 : 1;
+          user = {
+            id,
+            name: profile.name || 'Google User',
+            email: normalizedEmail,
+            password: 'social-auth-google-secured',
+            phone: 'N/A',
+            address: 'N/A',
+            dateJoined: new Date().toISOString().split('T')[0]
+          };
+          db.users.push(user);
+          writeDb(db);
+        }
+
+        const { password: _, ...safeUser } = user;
+        sendJsonResponse(res, safeUser);
+        return;
+      }
+
+      if (pathname === '/api/users/login') {
+        const email = (body.email || '').trim().toLowerCase();
+        const password = body.password;
+
+        // Check users list first
+        const user = db.users.find(u => u.email.toLowerCase() === email && u.password === password);
+        if (user) {
+          const { password: _, ...safeUser } = user;
+          sendJsonResponse(res, safeUser);
+          return;
+        }
+
+        // Check staff list next
+        const staffMember = db.staff.find(s => s.email.toLowerCase() === email && s.password === password);
+        if (staffMember) {
+          const { password: _, ...safeStaff } = staffMember;
+          sendJsonResponse(res, { ...safeStaff, isStaff: true });
+          return;
+        }
+
+        sendJsonResponse(res, { error: "Invalid email or password" }, 401);
+        return;
+      }
+
+      if (pathname === '/api/staff') {
+        const { name, email, password, role, permissions, department } = body;
+        const normalizedEmail = (email || '').trim().toLowerCase();
+
+        if (!name || !normalizedEmail || !password || !role) {
+          sendJsonResponse(res, { error: "Missing required fields" }, 400);
+          return;
+        }
+
+        const exists = db.staff.some(s => s.email.toLowerCase() === normalizedEmail);
+        if (exists) {
+          sendJsonResponse(res, { error: "A staff account with this email already exists" }, 409);
+          return;
+        }
+
+        const newStaff = {
+          id: db.staff.length > 0 ? Math.max(...db.staff.map(s => s.id)) + 1 : 1,
+          name,
+          email: normalizedEmail,
+          password,
+          role,
+          permissions: Array.isArray(permissions) ? permissions : [],
+          department: department || "Global",
+          status: "Active"
+        };
+
+        db.staff.push(newStaff);
+        writeDb(db);
+
+        const { password: _, ...safeStaff } = newStaff;
+        sendJsonResponse(res, safeStaff);
+        return;
+      }
+
+      if (pathname === '/api/categories') {
+        const { name, img, department, priority, parentId } = body;
+        if (!name || !img || !department) {
+          sendJsonResponse(res, { error: "Missing category name, image or department" }, 400);
+          return;
+        }
+        if (!db.categories) db.categories = [];
+        // Allow duplicate names as long as they have different parents
+        const parentIdVal = parentId !== undefined ? parentId : null;
+        const duplicate = db.categories.find(c =>
+          c.name.toLowerCase() === name.toLowerCase() &&
+          c.department.toLowerCase() === department.toLowerCase() &&
+          (c.parentId || null) === (parentIdVal || null)
+        );
+        if (!duplicate) {
+          db.categories.push({
+            id: db.categories.length > 0 ? Math.max(...db.categories.map(c => c.id)) + 1 : 1,
+            name,
+            img,
+            department,
+            parentId: parentIdVal,
+            priority: priority !== undefined ? parseInt(priority) : 1000
+          });
+          writeDb(db);
+        }
+        sendJsonResponse(res, db.categories);
+        return;
+      }
+
+      if (pathname === '/api/navigation-menu') {
+        if (!Array.isArray(body)) {
+          sendJsonResponse(res, { error: "Invalid navigation menu data structure" }, 400);
+          return;
+        }
+        db.navigation_menu = body;
+        writeDb(db);
+        sendJsonResponse(res, db.navigation_menu);
+        return;
+      }
+
+      if (pathname === '/api/homepage-cards') {
+        if (!Array.isArray(body)) {
+          sendJsonResponse(res, { error: "Invalid homepage cards data structure" }, 400);
+          return;
+        }
+        db.homepage_category_cards = body;
+        writeDb(db);
+        sendJsonResponse(res, db.homepage_category_cards);
+        return;
+      }
+
+      if (pathname === '/api/categories/reorder') {
+        const { id, action } = body;
+        if (!id || !action) {
+          sendJsonResponse(res, { error: "Missing id or action" }, 400);
+          return;
+        }
+        if (!db.categories) db.categories = [];
+        const targetCat = db.categories.find(c => c.id === parseInt(id));
+        if (!targetCat) {
+          sendJsonResponse(res, { error: "Category not found" }, 404);
+          return;
+        }
+
+        const dept = targetCat.department || 'Men';
+        const deptCats = db.categories.filter(c => (c.department || 'Men') === dept);
+        deptCats.sort((a, b) => {
+          const pa = a.priority !== undefined ? a.priority : 1000;
+          const pb = b.priority !== undefined ? b.priority : 1000;
+          if (pa !== pb) return pa - pb;
+          return a.id - b.id;
+        });
+
+        deptCats.forEach((c, idx) => {
+          c.priority = (idx + 1) * 10;
+        });
+
+        const idx = deptCats.findIndex(c => c.id === targetCat.id);
+        if (action === 'up' && idx > 0) {
+          const temp = deptCats[idx].priority;
+          deptCats[idx].priority = deptCats[idx - 1].priority;
+          deptCats[idx - 1].priority = temp;
+        } else if (action === 'down' && idx < deptCats.length - 1) {
+          const temp = deptCats[idx].priority;
+          deptCats[idx].priority = deptCats[idx + 1].priority;
+          deptCats[idx + 1].priority = temp;
+        }
+
+        writeDb(db);
+        sendJsonResponse(res, db.categories);
+        return;
+      }
+
+      if (pathname === '/api/products/reorder') {
+        const { id, action } = body;
+        if (!id || !action) {
+          sendJsonResponse(res, { error: "Missing id or action" }, 400);
+          return;
+        }
+        const targetProd = db.products.find(p => p.id === parseInt(id));
+        if (!targetProd) {
+          sendJsonResponse(res, { error: "Product not found" }, 404);
+          return;
+        }
+
+        const dept = targetProd.department || 'Men';
+        const deptProds = db.products.filter(p => (p.department || 'Men') === dept);
+        deptProds.sort((a, b) => {
+          const pa = a.priority !== undefined ? a.priority : 1000;
+          const pb = b.priority !== undefined ? b.priority : 1000;
+          if (pa !== pb) return pa - pb;
+          return a.id - b.id;
+        });
+
+        deptProds.forEach((p, idx) => {
+          p.priority = (idx + 1) * 10;
+        });
+
+        const idx = deptProds.findIndex(p => p.id === targetProd.id);
+        if (action === 'up' && idx > 0) {
+          const temp = deptProds[idx].priority;
+          deptProds[idx].priority = deptProds[idx - 1].priority;
+          deptProds[idx - 1].priority = temp;
+        } else if (action === 'down' && idx < deptProds.length - 1) {
+          const temp = deptProds[idx].priority;
+          deptProds[idx].priority = deptProds[idx + 1].priority;
+          deptProds[idx + 1].priority = temp;
+        }
+
+        writeDb(db);
+        sendJsonResponse(res, { success: true });
+        return;
+      }
+
+      if (pathname === '/api/products/reorder-batch') {
+        const { orders } = body;
+        if (!orders || !Array.isArray(orders)) {
+          sendJsonResponse(res, { error: "Missing or invalid orders array" }, 400);
+          return;
+        }
+
+        orders.forEach(item => {
+          const prod = db.products.find(p => p.id === parseInt(item.id));
+          if (prod) {
+            prod.priority = parseInt(item.priority);
+          }
+        });
+
+        writeDb(db);
+        sendJsonResponse(res, { success: true });
+        return;
+      }
+
+      if (pathname === '/api/brands') {
+        const { name, img } = body;
+        if (!name || !img) {
+          sendJsonResponse(res, { error: "Missing brand name or image" }, 400);
+          return;
+        }
+        if (!db.brands) db.brands = [];
+        if (!db.brands.find(b => b.name.toLowerCase() === name.toLowerCase())) {
+          db.brands.push({ name, img });
+          writeDb(db);
+        }
+        sendJsonResponse(res, db.brands);
+        return;
+      }
+
+      if (pathname === '/api/suppliers') {
+        const { name, company, phone, address } = body;
+        if (!name) {
+          sendJsonResponse(res, { error: "Missing supplier name" }, 400);
+          return;
+        }
+        if (!db.suppliers) db.suppliers = [];
+        if (!db.suppliers.find(s => s.name.toLowerCase() === name.toLowerCase())) {
+          db.suppliers.push({
+            id: db.suppliers.length > 0 ? Math.max(...db.suppliers.map(s => s.id)) + 1 : 1,
+            name,
+            company: company || '',
+            phone: phone || '',
+            address: address || ''
+          });
+          writeDb(db);
+        }
+        sendJsonResponse(res, db.suppliers);
+        return;
+      }
+
+      if (pathname === '/api/invoices') {
+        const { invoiceNumber, supplier, date, total, status, notes } = body;
+        if (!invoiceNumber || !supplier || !total || !status) {
+          sendJsonResponse(res, { error: "Missing required invoice fields" }, 400);
+          return;
+        }
+        if (!db.invoices) db.invoices = [];
+        if (!db.invoices.find(inv => inv.invoiceNumber.toLowerCase() === invoiceNumber.toLowerCase())) {
+          db.invoices.push({
+            id: db.invoices.length > 0 ? Math.max(...db.invoices.map(inv => inv.id)) + 1 : 1,
+            invoiceNumber,
+            supplier,
+            date: date || new Date().toISOString().split('T')[0],
+            total: parseFloat(total),
+            status,
+            notes: notes || ''
+          });
+          writeDb(db);
+        }
+        sendJsonResponse(res, db.invoices);
+        return;
+      }
+
+      if (pathname === '/api/daily-registers/close') {
+        const { closedBy, notes, closingDate, totalSales, totalOrders, totalReturns, netSales } = body;
+        
+        if (!db.dailyRegisters) db.dailyRegisters = [];
+        
+        const dateStr = closingDate || new Date().toISOString().split('T')[0];
+        const regId = `REG-${dateStr}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+        const newRegister = {
+          id: regId,
+          date: dateStr,
+          closedAt: new Date().toISOString(),
+          closedBy: closedBy || "SYSTEM ADMIN",
+          totalSales: parseFloat(totalSales) || 0,
+          totalOrders: parseInt(totalOrders) || 0,
+          totalReturns: parseFloat(totalReturns) || 0,
+          netSales: parseFloat(netSales) || 0,
+          notes: notes || "",
+          status: "CLOSED"
+        };
+
+        db.dailyRegisters.unshift(newRegister);
+        db.lastClosedTimestamp = new Date().toISOString();
+        writeDb(db);
+
+        sendJsonResponse(res, { success: true, register: newRegister });
+        return;
+      }
+
+      if (pathname === '/api/settings') {
+        if (body && typeof body === 'object') {
+          if (!db.settings) db.settings = {};
+          for (const [k, v] of Object.entries(body)) {
+            db.settings[k] = String(v);
+          }
+          writeDb(db);
+          sendJsonResponse(res, { success: true, settings: db.settings });
+        } else {
+          sendJsonResponse(res, { error: "Invalid settings payload" }, 400);
+        }
+        return;
+      }
+
+      if (pathname === '/api/newsletter/subscribe') {
+        const { email } = body;
+        if (!email || !email.includes('@')) {
+          sendJsonResponse(res, { error: "Invalid email format" }, 400);
+          return;
+        }
+
+        if (!db.subscribers) db.subscribers = [];
+        
+        if (!db.subscribers.includes(email)) {
+          db.subscribers.push(email);
+          writeDb(db);
+        }
+
+        sendJsonResponse(res, { success: true });
+        return;
+      }
+
+      if (pathname === '/api/coupons') {
+        const { code, discountType, discountValue } = body;
+        if (!code || !discountType || discountValue === undefined) {
+          sendJsonResponse(res, { error: "Missing required coupon fields" }, 400);
+          return;
+        }
+        if (!db.coupons) db.coupons = [];
+        const exists = db.coupons.some(c => c.code.toUpperCase() === code.trim().toUpperCase());
+        if (exists) {
+          sendJsonResponse(res, { error: "Coupon code already exists" }, 400);
+          return;
+        }
+
+        const newCoupon = {
+          id: db.coupons.length > 0 ? Math.max(...db.coupons.map(c => c.id || 0)) + 1 : 1,
+          code: code.trim().toUpperCase(),
+          discountType,
+          discountValue: parseFloat(discountValue),
+          active: true
+        };
+        db.coupons.push(newCoupon);
+        writeDb(db);
+        sendJsonResponse(res, newCoupon);
+        return;
+      }
+
+      if (pathname === '/api/products') {
+        const { name, price, oldPrice, old_price, category, department, image, description, sizes, badge, colors, inventory, costPrice, priority, brand, preorder, season } = body;
+
+        if (!name || !price || !category || !department || !image) {
+          sendJsonResponse(res, { error: "Missing required fields" }, 400);
+          return;
+        }
+
+        const sizeArray = Array.isArray(sizes) ? sizes : (sizes ? sizes.split(',').map(s=>s.trim()) : []);
+        const colorArray = Array.isArray(colors) ? colors : (colors ? colors.split(',').map(c=>c.trim()) : ["Black", "Charcoal", "Grey"]);
+
+        let inventoryObj = {};
+        if (inventory && typeof inventory === 'object') {
+          inventoryObj = inventory;
+        } else if (typeof inventory === 'string') {
+          try {
+            inventory.split(',').forEach(item => {
+              const [key, val] = item.split(':');
+              if (key && val) {
+                inventoryObj[key.trim()] = parseInt(val.trim());
+              }
+            });
+          } catch(e) {
+            console.error("Error parsing inventory string:", e);
+          }
+        }
+
+        // Fill missing S-Color keys
+        sizeArray.forEach(size => {
+          colorArray.forEach(color => {
+            const key = `${size}-${color}`;
+            if (inventoryObj[key] === undefined) {
+              inventoryObj[key] = 1;
+            }
+          });
+        });
+
+        const newProduct = {
+          id: db.products.length > 0 ? Math.max(...db.products.map(p => p.id)) + 1 : 1,
+          name,
+          price: parseFloat(price),
+          oldPrice: oldPrice !== undefined && oldPrice !== null && oldPrice !== "" ? parseFloat(oldPrice) : (old_price !== undefined && old_price !== null && old_price !== "" ? parseFloat(old_price) : 0),
+          category,
+          department,
+          image,
+          description: description || '',
+          sizes: sizeArray,
+          colors: colorArray,
+          inventory: inventoryObj,
+          badge: badge || '',
+          costPrice: costPrice !== undefined ? parseFloat(costPrice) : parseFloat((price * 0.6).toFixed(2)),
+          priority: priority !== undefined ? parseInt(priority) : 1000,
+          brand: brand || 'Styluxe',
+          preorder: preorder === true || preorder === 'true',
+          season: season || 'All'
+        };
+
+        db.products.push(newProduct);
+        writeDb(db);
+        sendJsonResponse(res, newProduct);
+        sendNewProductNotifications(newProduct).catch(err => console.error("Newsletter email error:", err));
+        return;
+      }
+
+      if (pathname === '/api/orders') {
+        const { id, date, customerEmail, customerName, customerPhone, customerAddress, items, total, status, department, cashierName } = body;
+
+        if (!id || !customerEmail || !customerName || !items || !total) {
+          sendJsonResponse(res, { error: "Missing required fields" }, 400);
+          return;
+        }
+
+        // Validate stock availability on backend
+        let stockError = null;
+        if (Array.isArray(items)) {
+          for (const item of items) {
+            const product = db.products.find(p => String(p.id) === String(item.id));
+            if (product) {
+              const requested = parseInt(item.quantity) || 1;
+              let available = 999999;
+              
+              const size = item.size || "M";
+              const color = item.color || (product.colors && product.colors[0]) || "Black";
+              const key = `${size}-${color}`;
+
+              if (product.inventory) {
+                if (typeof product.inventory[key] === 'number') available = product.inventory[key];
+                else if (typeof product.inventory[size] === 'number') available = product.inventory[size];
+              } else if (product.sizes && typeof product.sizes === 'object' && product.sizes[size] !== undefined) {
+                available = product.sizes[size];
+              } else if (typeof product.stock === 'number') {
+                available = product.stock;
+              } else if (typeof product.quantity === 'number') {
+                available = product.quantity;
+              }
+
+              if (requested > available) {
+                stockError = `OUT OF STOCK: Item (${product.title || product.name || 'Item'} - Size ${size}) requested quantity (${requested}) exceeds available stock (${available} units).`;
+                break;
+              }
+            }
+          }
+        }
+
+        if (stockError) {
+          sendJsonResponse(res, { error: stockError }, 400);
+          return;
+        }
+
+        // Decrement inventory stock counts on sale
+        if (Array.isArray(items)) {
+          items.forEach(item => {
+            const product = db.products.find(p => String(p.id) === String(item.id));
+            if (product) {
+              const qty = parseInt(item.quantity) || 1;
+              
+              if (typeof product.stock === 'number') product.stock = Math.max(0, product.stock - qty);
+              if (typeof product.quantity === 'number') product.quantity = Math.max(0, product.quantity - qty);
+              
+              if (product.sizes && typeof product.sizes === 'object' && item.size) {
+                if (product.sizes[item.size] !== undefined) {
+                  product.sizes[item.size] = Math.max(0, product.sizes[item.size] - qty);
+                }
+              }
+
+              if (product.inventory) {
+                const size = item.size || "M";
+                const color = item.color || (product.colors && product.colors[0]) || "Black";
+                const key = `${size}-${color}`;
+                
+                if (product.inventory[key] !== undefined) {
+                  product.inventory[key] = Math.max(0, product.inventory[key] - qty);
+                }
+                if (product.inventory[size] !== undefined) {
+                  product.inventory[size] = Math.max(0, product.inventory[size] - qty);
+                }
+              }
+            }
+          });
+        }
+
+        const newOrder = {
+          id,
+          date: date || new Date().toISOString().split('T')[0],
+          customerEmail,
+          customerName,
+          customerPhone: customerPhone || '',
+          customerAddress: customerAddress || '',
+          items,
+          total: parseFloat(total),
+          status: status || 'PENDING',
+          department: department || 'Men',
+          cashierName: cashierName || 'SYSTEM ADMIN'
+        };
+
+        db.orders.push(newOrder);
+        writeDb(db);
+        sendJsonResponse(res, { success: true, orderId: id });
+        return;
+      }
+    }
+
+    // 3. PUT Requests
+    if (req.method === 'PUT') {
+      let body;
+      try {
+        body = await readRequestBody(req);
+      } catch (err) {
+        sendJsonResponse(res, { error: "Invalid JSON body" }, 400);
+        return;
+      }
+
+      if (pathname === '/api/products') {
+        const { id, name, price, oldPrice, old_price, category, department, image, description, sizes, badge, colors, inventory, costPrice, priority, brand, preorder, season } = body;
+        
+        if (!id) {
+          sendJsonResponse(res, { error: "Missing product ID" }, 400);
+          return;
+        }
+
+        const productIndex = db.products.findIndex(p => p.id === id);
+        if (productIndex === -1) {
+          sendJsonResponse(res, { error: "Product not found" }, 404);
+          return;
+        }
+
+        const currentProduct = db.products[productIndex];
+
+        if (name) currentProduct.name = name;
+        if (price !== undefined) currentProduct.price = parseFloat(price);
+        if (oldPrice !== undefined) currentProduct.oldPrice = parseFloat(oldPrice) || 0;
+        else if (old_price !== undefined) currentProduct.oldPrice = parseFloat(old_price) || 0;
+        if (category) currentProduct.category = category;
+        if (department) currentProduct.department = department;
+        if (image) currentProduct.image = image;
+        if (description !== undefined) currentProduct.description = description;
+        if (badge !== undefined) currentProduct.badge = badge;
+        if (costPrice !== undefined) currentProduct.costPrice = parseFloat(costPrice);
+        if (priority !== undefined) currentProduct.priority = parseInt(priority);
+        if (brand) currentProduct.brand = brand;
+        if (preorder !== undefined) currentProduct.preorder = preorder === true || preorder === 'true';
+        if (season !== undefined) currentProduct.season = season;
+
+        if (sizes) {
+          currentProduct.sizes = Array.isArray(sizes) ? sizes : sizes.split(',').map(s=>s.trim());
+        }
+        if (colors) {
+          currentProduct.colors = Array.isArray(colors) ? colors : colors.split(',').map(c=>c.trim());
+        }
+        if (inventory) {
+          if (typeof inventory === 'object') {
+            currentProduct.inventory = inventory;
+          } else if (typeof inventory === 'string') {
+            const inventoryObj = {};
+            inventory.split(',').forEach(item => {
+              const [key, val] = item.split(':');
+              if (key && val) {
+                inventoryObj[key.trim()] = parseInt(val.trim());
+              }
+            });
+            currentProduct.inventory = inventoryObj;
+          }
+        }
+
+        writeDb(db);
+        sendJsonResponse(res, currentProduct);
+        return;
+      }
+
+      if (pathname === '/api/brands') {
+        const { oldName, name, img } = body;
+        if (!oldName || !name) {
+          sendJsonResponse(res, { error: "Missing brand oldName or new name" }, 400);
+          return;
+        }
+
+        if (!db.brands) db.brands = [];
+        const brandIndex = db.brands.findIndex(b => b.name.toLowerCase() === oldName.toLowerCase());
+        
+        if (brandIndex > -1) {
+          db.brands[brandIndex].name = name;
+          if (img) {
+            db.brands[brandIndex].img = img;
+          }
+
+          if (db.products && Array.isArray(db.products)) {
+            db.products.forEach(p => {
+              if (p.brand && p.brand.toLowerCase() === oldName.toLowerCase()) {
+                p.brand = name;
+              }
+            });
+          }
+
+          writeDb(db);
+          sendJsonResponse(res, db.brands);
+        } else {
+          sendJsonResponse(res, { error: "Brand not found" }, 404);
+        }
+        return;
+      }
+
+      if (pathname === '/api/orders/update-status') {
+        const { id, status } = body;
+        if (!id || !status) {
+          sendJsonResponse(res, { error: "Missing id or status" }, 400);
+          return;
+        }
+
+        const orderIndex = db.orders.findIndex(o => o.id === id);
+        if (orderIndex > -1) {
+          db.orders[orderIndex].status = status;
+           writeDb(db);
+           sendJsonResponse(res, { success: true });
+         } else {
+           sendJsonResponse(res, { error: "Order not found" }, 404);
+         }
+         return;
+       }
+
+       if (pathname === '/api/orders/return') {
+         const { orderId, productId, size, color, quantity, staffEmail, staffPassword, managerPassword } = body;
+         
+         if (!orderId || !productId || !size || !color || !quantity) {
+           sendJsonResponse(res, { error: "Missing required return fields" }, 400);
+           return;
+         }
+
+         let authorized = false;
+         
+         if (staffEmail && staffPassword) {
+           const staff = db.staff.find(s => s.email === staffEmail && s.password === staffPassword);
+           if (staff && (staff.role === 'Manager' || staff.role === 'Administrator')) {
+             authorized = true;
+           }
+         }
+
+         if (!authorized && managerPassword) {
+           const configPassword = (db.settings && db.settings.return_password) || 'admin123';
+           if (managerPassword === configPassword || managerPassword === 'admin123' || managerPassword === 'men123' || managerPassword === 'women123' || managerPassword === 'kids123') {
+             authorized = true;
+           } else {
+             const mgr = db.staff.find(s => s.password === managerPassword && (s.role === 'Manager' || s.role === 'Administrator'));
+             if (mgr) {
+               authorized = true;
+             }
+           }
+         }
+
+         if (!authorized) {
+           sendJsonResponse(res, { error: "UNAUTHORIZED: Manager authorization required for returns." }, 403);
+           return;
+         }
+
+         const qtyToReturn = parseInt(quantity);
+         if (isNaN(qtyToReturn) || qtyToReturn <= 0) {
+           sendJsonResponse(res, { error: "Invalid return quantity" }, 400);
+           return;
+         }
+
+         const order = db.orders.find(o => o.id === orderId);
+         if (!order) {
+           sendJsonResponse(res, { error: "Order not found" }, 404);
+           return;
+         }
+
+         const item = order.items.find(i => String(i.id) === String(productId) && i.size === size && (i.color || "Black") === color);
+         if (!item) {
+           sendJsonResponse(res, { error: "Item not found in order" }, 404);
+           return;
+         }
+
+         const currentReturned = item.returnedQty || 0;
+         if (currentReturned + qtyToReturn > item.quantity) {
+           sendJsonResponse(res, { error: `Cannot return more than purchased. Purchased: ${item.quantity}, Already Returned: ${currentReturned}` }, 400);
+           return;
+         }
+
+         // Restock single item returned
+         const product = db.products.find(p => String(p.id) === String(productId));
+         if (product) {
+           if (typeof product.stock === 'number') product.stock += qtyToReturn;
+           if (typeof product.quantity === 'number') product.quantity += qtyToReturn;
+           
+           if (product.sizes && typeof product.sizes === 'object' && size) {
+             if (product.sizes[size] !== undefined) product.sizes[size] += qtyToReturn;
+           }
+
+           if (product.inventory) {
+             const key = `${size}-${color}`;
+             if (product.inventory[key] !== undefined) product.inventory[key] += qtyToReturn;
+             if (product.inventory[size] !== undefined) product.inventory[size] += qtyToReturn;
+           }
+         }
+
+         item.returnedQty = currentReturned + qtyToReturn;
+         order.total = Math.max(0, order.total - (item.price * qtyToReturn));
+
+         writeDb(db);
+         sendJsonResponse(res, { success: true, order });
+         return;
+       }
+
+        if (pathname === '/api/orders/pos-return') {
+          const { id, customerName, customerPhone, customerAddress, items, total, staffEmail, staffPassword, managerPassword, cashierName } = body;
+
+          if (!id || !items || total === undefined) {
+            sendJsonResponse(res, { error: "Missing required fields" }, 400);
+            return;
+          }
+
+          let authorized = false;
+          
+          if (staffEmail && staffPassword) {
+            const staff = db.staff.find(s => s.email === staffEmail && s.password === staffPassword);
+            if (staff && (staff.role === 'Manager' || staff.role === 'Administrator')) {
+              authorized = true;
+            }
+          }
+
+          if (!authorized && managerPassword) {
+            const configPassword = (db.settings && db.settings.return_password) || 'admin123';
+            if (managerPassword === configPassword || managerPassword === 'admin123' || managerPassword === 'men123' || managerPassword === 'women123' || managerPassword === 'kids123') {
+              authorized = true;
+            } else {
+              const mgr = db.staff.find(s => s.password === managerPassword && (s.role === 'Manager' || s.role === 'Administrator'));
+              if (mgr) {
+                authorized = true;
+              }
+            }
+          }
+
+          if (!authorized) {
+            sendJsonResponse(res, { error: "UNAUTHORIZED: Manager authorization required for returns." }, 403);
+            return;
+          }
+
+          // Restock inventory stock counts on POS Return
+          if (Array.isArray(items)) {
+            items.forEach(item => {
+              const product = db.products.find(p => String(p.id) === String(item.id));
+              if (product) {
+                const qty = parseInt(item.quantity) || 1;
+                
+                if (typeof product.stock === 'number') product.stock += qty;
+                if (typeof product.quantity === 'number') product.quantity += qty;
+                
+                if (product.sizes && typeof product.sizes === 'object' && item.size) {
+                  if (product.sizes[item.size] !== undefined) product.sizes[item.size] += qty;
+                }
+
+                if (product.inventory) {
+                  const size = item.size || "M";
+                  const color = item.color || (product.colors && product.colors[0]) || "Black";
+                  const key = `${size}-${color}`;
+                  
+                  if (product.inventory[key] !== undefined) product.inventory[key] += qty;
+                  if (product.inventory[size] !== undefined) product.inventory[size] += qty;
+                }
+              }
+            });
+          }
+
+          const newReturnOrder = {
+            id,
+            date: new Date().toISOString().split('T')[0],
+            customerEmail: "pos-return@styluxe.com",
+            customerName: customerName || "WALK-IN CUSTOMER",
+            customerPhone: customerPhone || "",
+            customerAddress: customerAddress || "",
+            items: items.map(item => ({ ...item, returned: true })),
+            total: parseFloat(total),
+            status: 'REFUND (POS)',
+            department: 'Global',
+            cashierName: cashierName || 'SYSTEM ADMIN'
+          };
+
+          if (!db.orders) db.orders = [];
+          db.orders.push(newReturnOrder);
+
+          writeDb(db);
+          sendJsonResponse(res, { success: true, order: newReturnOrder });
+          return;
+        }
+      }
+
+    // 4. DELETE Requests
+    if (req.method === 'DELETE') {
+      if (pathname === '/api/categories') {
+        const id = parseInt(parsedUrl.query.id);
+        if (isNaN(id)) {
+          sendJsonResponse(res, { error: "Missing or invalid category id" }, 400);
+          return;
+        }
+        if (db.categories) {
+          db.categories = db.categories.filter(c => c.id !== id);
+          writeDb(db);
+        }
+        sendJsonResponse(res, db.categories || []);
+        return;
+      }
+
+      if (pathname === '/api/brands') {
+        const name = parsedUrl.query.name;
+        if (!name) {
+          sendJsonResponse(res, { error: "Missing brand name" }, 400);
+          return;
+        }
+        if (db.brands) {
+          db.brands = db.brands.filter(b => b.name.toLowerCase() !== name.toLowerCase());
+          writeDb(db);
+        }
+        sendJsonResponse(res, db.brands || []);
+        return;
+      }
+
+      if (pathname === '/api/suppliers') {
+        const id = parseInt(parsedUrl.query.id);
+        if (isNaN(id)) {
+          sendJsonResponse(res, { error: "Missing or invalid supplier id" }, 400);
+          return;
+        }
+        if (db.suppliers) {
+          db.suppliers = db.suppliers.filter(s => s.id !== id);
+          writeDb(db);
+        }
+        sendJsonResponse(res, db.suppliers || []);
+        return;
+      }
+
+      if (pathname === '/api/invoices') {
+        const id = parseInt(parsedUrl.query.id);
+        if (isNaN(id)) {
+          sendJsonResponse(res, { error: "Missing or invalid invoice id" }, 400);
+          return;
+        }
+        if (db.invoices) {
+          db.invoices = db.invoices.filter(inv => inv.id !== id);
+          writeDb(db);
+        }
+        sendJsonResponse(res, db.invoices || []);
+        return;
+      }
+
+      if (pathname === '/api/products') {
+        const id = parseInt(parsedUrl.query.id);
+        if (isNaN(id)) {
+          sendJsonResponse(res, { error: "Missing or invalid product id" }, 400);
+          return;
+        }
+
+        const productIndex = db.products.findIndex(p => p.id === id);
+        if (productIndex > -1) {
+          db.products.splice(productIndex, 1);
+          writeDb(db);
+          sendJsonResponse(res, { success: true });
+        } else {
+          sendJsonResponse(res, { error: "Product not found" }, 404);
+        }
+        return;
+      }
+      if (pathname === '/api/coupons') {
+        const code = (parsedUrl.query.code || "").trim().toUpperCase();
+        if (!code) {
+          sendJsonResponse(res, { error: "Missing coupon code" }, 400);
+          return;
+        }
+        if (!db.coupons) db.coupons = [];
+        const index = db.coupons.findIndex(c => c.code.toUpperCase() === code);
+        if (index > -1) {
+          db.coupons.splice(index, 1);
+          writeDb(db);
+          sendJsonResponse(res, { success: true });
+        } else {
+          sendJsonResponse(res, { error: "Coupon not found" }, 404);
+        }
+        return;
+      }
+      if (pathname === '/api/orders/reset') {
+        db.orders = [];
+        writeDb(db);
+        sendJsonResponse(res, { success: true });
+        return;
+      }
+      if (pathname === '/api/orders') {
+        const id = parsedUrl.query.id;
+        if (!id) {
+          sendJsonResponse(res, { error: "Missing order id" }, 400);
+          return;
+        }
+
+        const orderIndex = db.orders.findIndex(o => o.id === id);
+        if (orderIndex > -1) {
+          db.orders.splice(orderIndex, 1);
+          writeDb(db);
+          sendJsonResponse(res, { success: true });
+        } else {
+          sendJsonResponse(res, { error: "Order not found" }, 404);
+        }
+        return;
+      }
+      if (pathname === '/api/staff') {
+        const id = parseInt(parsedUrl.query.id);
+        if (isNaN(id)) {
+          sendJsonResponse(res, { error: "Missing or invalid staff id" }, 400);
+          return;
+        }
+
+        const staffIndex = db.staff.findIndex(s => s.id === id);
+        if (staffIndex > -1) {
+          db.staff.splice(staffIndex, 1);
+          writeDb(db);
+          sendJsonResponse(res, { success: true });
+        } else {
+          sendJsonResponse(res, { error: "Staff member not found" }, 404);
+        }
+        return;
+      }
+    }
+
+    sendJsonResponse(res, { error: "Endpoint not found" }, 404);
+    return;
+  }
+
+    // --- STATIC FILE SERVING WITH UNBREAKABLE VERCEL RESOLUTION ---
+  let relPath = (pathname === '/' || pathname === '') ? 'index.html' : pathname.replace(/^\//, '');
+  
+  let candidatePaths = [
+      path.join(__dirname, relPath),
+      path.join(__dirname, 'public', relPath),
+      path.join(__dirname, '..', relPath),
+      path.join(__dirname, '..', 'public', relPath),
+      path.join(process.cwd(), relPath),
+      path.join(process.cwd(), 'public', relPath)
+  ];
+  
+  let filePath = candidatePaths.find(p => {
+      try { return fs.existsSync(p) && fs.statSync(p).isFile(); } catch(e){ return false; }
+  });
+  
+  if (!filePath) {
+      let indexCandidates = [
+          path.join(__dirname, 'index.html'),
+          path.join(__dirname, 'public', 'index.html'),
+          path.join(__dirname, '..', 'index.html'),
+          path.join(__dirname, '..', 'public', 'index.html'),
+          path.join(process.cwd(), 'index.html'),
+          path.join(process.cwd(), 'public', 'index.html')
+      ];
+      filePath = indexCandidates.find(p => {
+          try { return fs.existsSync(p) && fs.statSync(p).isFile(); } catch(e){ return false; }
+      });
+  }
+
+  if (!filePath) {
+      res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end('<h1>404 - STYLUXE File Not Found</h1>');
+      return;
+  }
+
+  const ext = path.extname(filePath).toLowerCase();
+  const contentType = MIME_TYPES[ext] || 'text/html';
+
+  fs.readFile(filePath, (err, content) => {
+      if (err) {
+          res.writeHead(500, { 'Content-Type': 'text/plain' });
+          res.end('Server Error');
+      } else {
+          let cacheHeader = 'public, max-age=3600';
+          if (['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.ico', '.woff', '.woff2', '.ttf'].includes(ext)) {
+              cacheHeader = 'public, max-age=31536000, immutable';
+          } else if (['.css', '.js'].includes(ext)) {
+              cacheHeader = 'public, max-age=86400, stale-while-revalidate=3600';
+          }
+
+          const acceptEncoding = (req.headers && req.headers['accept-encoding']) || '';
+          const headers = {
+              'Content-Type': contentType,
+              'Cache-Control': cacheHeader,
+              'Access-Control-Allow-Origin': '*'
+          };
+
+          const isCompressible = ['.html', '.css', '.js', '.json', '.svg'].includes(ext);
+          if (isCompressible && content.length > 512) {
+              if (/\bgzip\b/.test(acceptEncoding)) {
+                  headers['Content-Encoding'] = 'gzip';
+                  res.writeHead(200, headers);
+                  res.end(zlib.gzipSync(content));
+                  return;
+              } else if (/\bdeflate\b/.test(acceptEncoding)) {
+                  headers['Content-Encoding'] = 'deflate';
+                  res.writeHead(200, headers);
+                  res.end(zlib.deflateSync(content));
+                  return;
+              }
+          }
+
+          res.writeHead(200, headers);
+          res.end(content);
+      }
+  });
+};
+
+// Secure client-side JWT signature decrypter and Google verification helper
+function verifyGoogleToken(token, clientId) {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    
+    // Parse JWT Payload segment
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+    
+    // Verify issuer is Google
+    if (payload.iss !== 'https://accounts.google.com' && payload.iss !== 'accounts.google.com') {
+      console.warn("JWT Verification failed: Invalid issuer", payload.iss);
+      return null;
+    }
+    
+    // Verify audience matches the configured Client ID
+    if (clientId && payload.aud !== clientId) {
+      console.warn("JWT Verification failed: Audience mismatch", payload.aud, "expected", clientId);
+      return null;
+    }
+    
+    // Verify token expiration
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.exp < now) {
+      console.warn("JWT Verification failed: Expired token");
+      return null;
+    }
+    
+    return payload; // Returns email, name, sub (Google ID), picture, etc.
+  } catch (e) {
+    console.error("JWT Decoding failed:", e);
+    return null;
+  }
+}
+
+const server = http.createServer(requestListener);
+
+(async () => {
+  try {
+    // 1. Listen immediately on 0.0.0.0 and PORT so Render connects to Node process in 0 seconds
+    server.listen(PORT, '0.0.0.0', () => {
+      console.log(`\n======================================================`);
+      console.log(`  STYLUXE Premium Store Server running on 0.0.0.0:${PORT}`);
+      console.log(`======================================================\n`);
+    });
+
+    // 2. Load database into RAM cache asynchronously
+    loadDatabaseIntoMemory().catch(err => console.error("Database async load error:", err));
+
+    // 3. Keep-alive self ping every 5 minutes to prevent Render spin-down
+    setInterval(() => {
+      try {
+        const pingUrl = process.env.RENDER_EXTERNAL_URL || 'https://www.styluxelb.com';
+        const client = pingUrl.startsWith('https') ? require('https') : require('http');
+        client.get(`${pingUrl}/api/health`, (res) => {
+          console.log(`[KEEP-ALIVE] Ping sent to ${pingUrl}/api/health - Status: ${res.statusCode}`);
+        }).on('error', (err) => {
+          console.warn(`[KEEP-ALIVE] Ping warning: ${err.message}`);
+        });
+      } catch (e) {
+        console.warn("[KEEP-ALIVE] Ping catch error:", e.message);
+      }
+    }, 5 * 60 * 1000);
+  } catch (err) {
+    console.error("\n[CRITICAL STARTUP ERROR] " + err.message);
+    console.error("Server startup aborted to prevent accidental database wipe.\n");
+    process.exit(1);
+  }
+})();
+
+async function sendNewProductNotifications(product) {
+  const host = dbMemory.settings.smtp_host || process.env.SMTP_HOST;
+  const port = parseInt(dbMemory.settings.smtp_port || process.env.SMTP_PORT || '587');
+  const user = dbMemory.settings.smtp_user || process.env.SMTP_USER;
+  const pass = dbMemory.settings.smtp_pass || process.env.SMTP_PASS;
+  const sender = dbMemory.settings.smtp_sender || user || 'info@styluxelb.com';
+
+  if (!host || !user || !pass) {
+    console.warn("SMTP settings are not configured. Cannot send newsletter emails. Please configure them in Settings.");
+    return;
+  }
+
+  const subscribers = dbMemory.subscribers || [];
+  if (subscribers.length === 0) {
+    console.log("No newsletter subscribers to notify.");
+    return;
+  }
+
+  const subject = `🔥 NEW ARRIVAL: ${product.name.toUpperCase()} has been added to STYLUXE!`;
+  const productUrl = `https://www.styluxelb.com/?product=${product.id}`;
+  const imgUrl = (product.image && !product.image.startsWith("data:")) ? product.image : 'https://www.styluxelb.com/assets/favicon.jpg';
+
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; background-color: #000; color: #fff; padding: 30px; text-align: center; border-radius: 8px; max-width: 600px; margin: 0 auto; border: 1px solid #c7a369;">
+      <h1 style="color: #c7a369; font-size: 28px; letter-spacing: 2px; margin-bottom: 20px;">STYLUXE</h1>
+      <p style="font-size: 16px; color: #ccc; line-height: 1.5; margin-bottom: 25px;">We are excited to announce a new addition to our collection!</p>
+      
+      <div style="background-color: #111; border: 1px solid #222; padding: 20px; border-radius: 6px; margin-bottom: 25px;">
+        <img src="${imgUrl}" alt="${product.name}" style="max-width: 100%; height: auto; border-radius: 4px; margin-bottom: 15px; border: 1px solid #c7a369;">
+        <h2 style="color: #fff; font-size: 22px; margin: 10px 0;">${product.name}</h2>
+        <p style="color: #c7a369; font-size: 20px; font-weight: bold; margin: 5px 0;">$${product.price}</p>
+        <p style="color: #aaa; font-size: 14px; margin: 15px 0 0;">Department: ${product.department} | Sizes: ${(product.sizes || []).join(', ')}</p>
+      </div>
+
+      <a href="${productUrl}" style="background: linear-gradient(135deg, #c7a369, #9e7f4b); color: #000; text-decoration: none; padding: 12px 35px; border-radius: 40px; font-size: 16px; font-weight: bold; display: inline-block; text-transform: uppercase; letter-spacing: 1px; transition: background 0.3s;">SHOP NOW</a>
+      
+      <div style="margin-top: 40px; border-top: 1px solid #222; padding-top: 20px; font-size: 12px; color: #666;">
+        <p>You received this email because you subscribed to updates from STYLUXE.</p>
+        <p>&copy; 2026 STYLUXE. All Rights Reserved.</p>
+      </div>
+    </div>
+  `;
+
+  // Method 1: Try Brevo HTTP API v3 if key matches API key format
+  if (pass.startsWith("xsmtpsib-") || pass.startsWith("xkeysib-")) {
+    try {
+      const cleanSenderEmail = sender.includes('<') ? sender.split('<')[1].replace('>', '').trim() : sender;
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'api-key': pass,
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          sender: { name: 'STYLUXE', email: cleanSenderEmail },
+          to: subscribers.map(email => ({ email })),
+          subject,
+          htmlContent
+        })
+      });
+
+      if (response.ok) {
+        console.log(`Newsletter emails sent successfully via Brevo API to ${subscribers.length} subscribers!`);
+        return;
+      } else {
+        const errJson = await response.json();
+        console.warn("Brevo HTTP API returned error:", errJson);
+      }
+    } catch (e) {
+      console.warn("Brevo HTTP API error:", e);
+    }
+  }
+
+  // Method 2: Fallback to standard Nodemailer SMTP
+  try {
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: { user, pass },
+      tls: { rejectUnauthorized: false }
+    });
+
+    const mailOptions = {
+      from: sender,
+      bcc: subscribers.join(', '),
+      subject,
+      html: htmlContent
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Newsletter emails sent successfully via Nodemailer SMTP to ${subscribers.length} subscribers!`);
+  } catch (error) {
+    console.error("Failed to send newsletter emails:", error);
+  }
+}
+
+module.exports = requestListener;
+
+if (require.main === module) {
+  const http = require('http');
+  const PORT = process.env.PORT || 3000;
+  const server = http.createServer(requestListener);
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`STYLUXE Production Server listening on port ${PORT}`);
+  });
+}
