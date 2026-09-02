@@ -7941,17 +7941,28 @@ function cancelBrandEdit() {
 function deleteBrand(name) {
     if (!confirm(`ARE YOU SURE YOU WANT TO DELETE THE BRAND "${name.toUpperCase()}"?`)) return;
 
+    BRANDS = BRANDS.filter(b => b.name.toLowerCase() !== name.toLowerCase());
+    renderBrandSlider();
+    renderAdminBrands();
+    populateBrandOptions();
+
     fetch(`/api/brands?name=${encodeURIComponent(name)}`, {
         method: 'DELETE'
     })
     .then(async res => {
         if (res.ok) {
-            BRANDS = await res.json();
-            renderBrandSlider();
-            renderAdminBrands();
-            populateBrandOptions();
-        } else {
-            alert("FAILED TO DELETE BRAND.");
+            try {
+                const contentType = res.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                    const data = await res.json();
+                    if (Array.isArray(data)) {
+                        BRANDS = data;
+                        renderBrandSlider();
+                        renderAdminBrands();
+                        populateBrandOptions();
+                    }
+                }
+            } catch(e){}
         }
     })
     .catch(err => console.error("Error deleting brand:", err));
