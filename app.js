@@ -4081,7 +4081,7 @@ async function applyCouponCode() {
     }
 
     try {
-        const response = await fetch('/api/coupons/validate?code=${code}');
+        const response = await fetch(`/api/coupons/validate?code=${code}`);
         const result = await response.json();
 
         if (response.ok && result.valid) {
@@ -7941,7 +7941,7 @@ function cancelBrandEdit() {
 function deleteBrand(name) {
     if (!confirm(`ARE YOU SURE YOU WANT TO DELETE THE BRAND "${name.toUpperCase()}"?`)) return;
 
-    fetch('/api/brands?name=${encodeURIComponent(name)}', {
+    fetch(`/api/brands?name=${encodeURIComponent(name)}`, {
         method: 'DELETE'
     })
     .then(async res => {
@@ -8056,7 +8056,7 @@ function handleAddSupplier(event) {
 function deleteSupplier(id) {
     if (!confirm("ARE YOU SURE YOU WANT TO DELETE THIS SUPPLIER?")) return;
 
-    fetch('/api/suppliers?id=${id}', {
+    fetch(`/api/suppliers?id=${id}`, {
         method: 'DELETE'
     })
     .then(async res => {
@@ -8104,7 +8104,7 @@ function handleAddInvoice(event) {
 function deleteInvoice(id) {
     if (!confirm("ARE YOU SURE YOU WANT TO DELETE THIS INVOICE?")) return;
 
-    fetch('/api/invoices?id=${id}', {
+    fetch(`/api/invoices?id=${id}`, {
         method: 'DELETE'
     })
     .then(async res => {
@@ -9351,7 +9351,7 @@ function handleNewStaffSubmit(event) {
 // Suspend/delete staff helper
 function deleteStaff(staffId) {
     if (confirm("ARE YOU SURE YOU WANT TO SUSPEND THIS STAFF PROFILE?")) {
-        fetch('/api/staff?id=${staffId}', {
+        fetch(`/api/staff?id=${staffId}`, {
             method: 'DELETE'
         })
         .then(async res => {
@@ -9990,7 +9990,7 @@ async function deleteCoupon(code) {
     if (!confirm(`Are you sure you want to delete coupon ${code} permanently?`)) return;
 
     try {
-        const response = await fetch('/api/coupons?code=${code}', {
+        const response = await fetch(`/api/coupons?code=${code}`, {
             method: 'DELETE'
         });
 
@@ -10171,7 +10171,7 @@ function trackOrderSubmit() {
 
     resultEl.innerHTML = `<div style="text-align: center; margin-top: 1rem;"><i class="fa-solid fa-spinner fa-spin" style="font-size: 1.8rem; color: var(--color-accent);"></i> Searching...</div>`;
 
-    fetch('/api/orders/track?query=${encodeURIComponent(inputVal)}')
+    fetch(`/api/orders/track?query=${encodeURIComponent(inputVal)}`)
         .then(res => {
             if (!res.ok) throw new Error("Order not found");
             return res.json();
@@ -10220,7 +10220,7 @@ function selectOrderToTrack(orderId) {
     if (!resultEl) return;
     resultEl.innerHTML = `<div style="text-align: center; margin-top: 1rem;"><i class="fa-solid fa-spinner fa-spin" style="font-size: 1.8rem; color: var(--color-accent);"></i> Loading timeline...</div>`;
     
-    fetch('/api/orders/track?query=${encodeURIComponent(orderId)}')
+    fetch(`/api/orders/track?query=${encodeURIComponent(orderId)}`)
         .then(res => res.json())
         .then(orders => {
             if (orders && orders[0]) {
